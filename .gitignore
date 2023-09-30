@@ -11,7 +11,7 @@ habitat-lab
 .vscode
 
 # data
-data/
+data
 
 # logs
 tb/

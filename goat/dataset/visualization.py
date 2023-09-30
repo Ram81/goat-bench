@@ -1,5 +1,6 @@
 import os
-from typing import Any, Dict, List
+import shutil
+from typing import Any, Dict, List, Optional
 
 import cv2
 import imageio
@@ -24,6 +25,14 @@ NON_NAVIGABLE = [150, 150, 150]  # Grey
 POINT_COLOR = [150, 150, 150]  # Grey
 VIEW_POINT_COLOR = [0, 200, 0]  # Green
 CENTER_POINT_COLOR = [200, 0, 0]  # Red
+WHITE = (255, 255, 255)
+BLACK = (0, 0, 0)
+FONT = cv2.FONT_HERSHEY_SIMPLEX
+
+
+def short_scene(scene):
+    return scene.split("/")[-1].split(".")[0]
+
 
 color2RGB = {
     "Black": (0, 0, 0),
@@ -44,14 +53,16 @@ color2RGB = {
     "Navy": (0, 0, 128),
 }
 
+
 def get_depth(depth_obs, semantic_obs, objects):
     obj_depths = []
     for obj in objects:
         id = obj.semantic_id
         depth = np.mean(depth_obs[semantic_obs == id])
         obj_depths.append("{:.2f}".format(depth))
-        
+
     return obj_depths
+
 
 def get_color(rgb_obs, semantic_obs, objects):
     """
@@ -133,11 +144,15 @@ def get_bounding_box(
         ).reshape((1, H, W))
 
     boxes = masks_to_boxes(torch.from_numpy(masks))
-    
+
     bbox_metadata = []
     added_wall = False
     for i, obj in enumerate(objectList):
-        if obj.category.name() == target.category.name() and obj.semantic_id != target.semantic_id and obj.id != target.id:
+        if (
+            obj.category.name() == target.category.name()
+            and obj.semantic_id != target.semantic_id
+            and obj.id != target.id
+        ):
             continue
         if "wall" in obj.category.name() and added_wall:
             continue
@@ -148,7 +163,13 @@ def get_bounding_box(
                 "category": obj.category.name(),
                 "semantic_id": obj.semantic_id,
                 "bbox": boxes[i].cpu().detach().numpy().tolist(),
-                "area": float(((boxes[i][2] - boxes[i][0]) * (boxes[i][3] - boxes[i][1])).cpu().detach().numpy() / (H * W)),
+                "area": float(
+                    ((boxes[i][2] - boxes[i][0]) * (boxes[i][3] - boxes[i][1]))
+                    .cpu()
+                    .detach()
+                    .numpy()
+                    / (H * W)
+                ),
                 "is_target": obj.semantic_id == target.semantic_id,
             }
         )
@@ -162,9 +183,15 @@ def get_bounding_box(
     rgb_key = "color" if "color" in obs.keys() else "rgb"
     img = Image.fromarray(obs["color_sensor"][:, :, :3], "RGB")
     if depths is None:
-        labels = [f"{obj.category.name()}_{obj.semantic_id}" for i,obj in enumerate(objectList)]
+        labels = [
+            f"{obj.category.name()}_{obj.semantic_id}"
+            for i, obj in enumerate(objectList)
+        ]
     else:
-        labels = [f"{obj.category.name()}_{obj.semantic_id}_d = {depths[i]}" for i,obj in enumerate(objectList)]
+        labels = [
+            f"{obj.category.name()}_{obj.semantic_id}_d = {depths[i]}"
+            for i, obj in enumerate(objectList)
+        ]
     drawn_img = draw_bounding_boxes(
         PILToTensor()(img),
         boxes,
@@ -180,9 +207,9 @@ def get_bounding_box(
 def draw_bbox_on_img(observation, boxes, labels, bbox_color="red"):
     if not isinstance(boxes, torch.Tensor):
         boxes = torch.Tensor(boxes)
-    
+
     img = Image.fromarray(observation["color_sensor"][:, :, :3], "RGB")
-        
+
     drawn_img = draw_bounding_boxes(
         PILToTensor()(img),
         boxes,
@@ -233,6 +260,7 @@ def get_best_viewpoint_with_posesampler(
     else:
         return False, None
 
+
 def objects_in_view(observation, target_obj, threshold=0.005, max_depth=4.5):
     depth_obs = observation["depth_sensor"]
     semantic_obs = observation["semantic_sensor"]
@@ -252,8 +280,117 @@ def objects_in_view(observation, target_obj, threshold=0.005, max_depth=4.5):
             continue
         if total_pixels / area > threshold:
             objects.append(obj_id)
-    
-    #print("Post depth filtering: {}/{} - {}".format(len(depth_filtered), len(obj_ids), avg_depths))
+
+    # print("Post depth filtering: {}/{} - {}".format(len(depth_filtered), len(obj_ids), avg_depths))
 
     return objects, avg_depths, obj_ids, depth_filtered
 
+
+def plot_area(
+    scene: str,
+    obj: SemanticObject,
+    points: List[ndarray],
+    points_iou: List[ndarray],
+) -> None:
+    max_coord = 1000
+    image = np.zeros((max_coord, max_coord, 3), dtype=np.uint8)
+
+    def mark_points(points, color):
+        int_points = [
+            (int(p[0] * 10 + max_coord / 2), int(p[2] * 10 + max_coord / 2))
+            for p in points
+        ]
+        for p in int_points:
+            image[p[0], p[1]] = color
+
+    def iou_points(points, color):
+        int_points = [
+            (
+                int(p[0] * 10 + max_coord / 2),
+                int(p[2] * 10 + max_coord / 2),
+                iou,
+            )
+            for iou, p, _ in points
+        ]
+        for p in int_points:
+            if p[2] == -1:
+                image[p[0], p[1]] = NON_NAVIGABLE
+            elif p[2] == -0.5:
+                image[p[0], p[1]] = MAX_DIST
+            else:
+                color = int((p[2] + 1.0) * 255)
+                image[p[0], p[1]] = [color, color, color]
+
+    iou_points(points, POINT_COLOR)
+    mark_points(points_iou, VIEW_POINT_COLOR)
+    mark_points([obj.aabb.center], CENTER_POINT_COLOR)
+
+    save_to = os.path.join(
+        IMAGE_DIR, short_scene(scene), obj.id, "viewpoint_grid.png"
+    )
+    os.makedirs(os.path.dirname(save_to), exist_ok=True)
+    imageio.imsave(save_to, image)
+
+
+def draw_border(img: ndarray, thickness: int, color: ndarray) -> ndarray:
+    vbar = np.ones((img.shape[0], thickness, 3)) * color
+    img = np.concatenate([vbar, img, vbar], axis=1)
+    hbar = np.ones((thickness, img.shape[1], 3)) * color
+    img = np.concatenate([hbar, img, hbar], axis=0)
+    return img
+
+
+def save_hfov_test_imgs(
+    obs: List[Dict[str, ndarray]],
+    hfovs: List[float],
+    save_to: Optional[str] = None,
+    save_gif: bool = True,
+    save_imgs: bool = True,
+) -> None:
+    """Write HFOV on each image and save to disk"""
+    if save_to is None:
+        save_to = os.path.join(IMAGE_DIR, "hfov_test")
+
+    os.makedirs(save_to, exist_ok=True)
+
+    loc = (50, 50)
+    lt = cv2.LINE_AA
+
+    images = []
+    for o, hfov in zip(obs, hfovs):
+        txt = f"HFOV: {hfov}"
+        img = obs_to_frame(o)
+        img = cv2.putText(img, txt, loc, FONT, 1, BLACK, 6, lt)
+        img = cv2.putText(img, txt, loc, FONT, 1, WHITE, 3, lt)
+        if save_gif:
+            images.append(cv2.cvtColor(img, cv2.COLOR_BGR2RGB))
+        if save_imgs:
+            path = os.path.join(save_to, "src", f"hfov_{hfov}.png")
+            os.makedirs(os.path.dirname(path), exist_ok=True)
+            cv2.imwrite(path, img)
+
+    if save_gif:
+        path = os.path.join(save_to, "hfov.gif")
+        imageio.mimsave(path, images)
+
+
+def log_text(verbose, scene, obj, obj_cat, text):
+    if not verbose:
+        return
+
+    path = os.path.join(IMAGE_DIR, short_scene(scene), obj.id, "stats.txt")
+    os.makedirs(os.path.dirname(path), exist_ok=True)
+
+    if not os.path.exists(path):
+        with open(path, "w") as f:
+            f.write(f"Object ID: {obj.id}\n")
+            f.write(f"Object Category: {obj_cat}\n")
+    else:
+        with open(path, "a") as f:
+            f.write(f"{text}\n")
+
+
+def clear_log(verbose, scene):
+    path = os.path.join(IMAGE_DIR, short_scene(scene))
+    if os.path.exists(path) and verbose:
+        shutil.rmtree(path)
