@@ -61,15 +61,19 @@ class ObjectCategoryMapping(MutableMapping):
             "decoration",
         ],
     ) -> Dict[str, str]:
-        # Filter based on coverage
-        file = open(coverage_meta_file, "rb")
-        coverage_metadata = pickle.load(file)
+        coverage_metadata_dict = None
+        if coverage_meta_file is not None and os.path.exists(
+            coverage_meta_file
+        ):
+            # Filter based on coverage
+            file = open(coverage_meta_file, "rb")
+            coverage_metadata = pickle.load(file)
 
-        coverage_metadata_dict = defaultdict(list)
-        for category, coverage_meta in coverage_metadata.items():
-            for frame_coverage, _, scene in coverage_meta:
-                if frame_coverage >= frame_coverage_threshold:
-                    coverage_metadata_dict[category].append(frame_coverage)
+            coverage_metadata_dict = defaultdict(list)
+            for category, coverage_meta in coverage_metadata.items():
+                for frame_coverage, _, scene in coverage_meta:
+                    if frame_coverage >= frame_coverage_threshold:
+                        coverage_metadata_dict[category].append(frame_coverage)
 
         mapping = {}
         threshold_filtering = 0
@@ -91,7 +95,10 @@ class ObjectCategoryMapping(MutableMapping):
                         attr_filtering += 1
                         break
 
-                if len(coverage_metadata_dict[raw_name]) < 1:
+                if (
+                    coverage_metadata_dict is not None
+                    and len(coverage_metadata_dict[raw_name]) < 1
+                ):
                     threshold_filtering += 1
                     ignore_category = True
 
@@ -153,7 +160,6 @@ class ObjectCategoryMapping(MutableMapping):
 
 
 class WordnetMapping(MutableMapping):
-
     _mapping: Dict[str, str]
 
     def __init__(
@@ -167,9 +173,7 @@ class WordnetMapping(MutableMapping):
         )
 
     @staticmethod
-    def load_categories(
-        mapping_file: str
-    ) -> Dict[str, str]:
+    def load_categories(mapping_file: str) -> Dict[str, str]:
         if mapping_file is None:
             return {}
         wordnet_mapping = load_json(mapping_file)
@@ -270,9 +274,7 @@ def get_hm3d_semantic_scenes(
     semantic_scenes = {}  # split -> scene file path
     for split in splits:
         split_dir = os.path.join(hm3d_dataset_dir, split)
-        all_scenes = [
-            os.path.join(split_dir, s) for s in os.listdir(split_dir)
-        ]
+        all_scenes = [os.path.join(split_dir, s) for s in os.listdir(split_dir)]
         all_scenes = [s for s in all_scenes if include_scene(s)]
         scene_paths = {os.path.join(s, get_basis_file(s)) for s in all_scenes}
         semantic_scenes[split] = scene_paths
