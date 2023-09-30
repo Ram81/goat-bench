@@ -1,3 +1,4 @@
+from copy import deepcopy
 from typing import List, Optional, Tuple, Union
 
 import habitat_sim
@@ -5,8 +6,7 @@ import numpy as np
 from habitat_sim._ext.habitat_sim_bindings import BBox, SemanticObject
 from habitat_sim.agent.agent import AgentState, SixDOFPose
 from habitat_sim.simulator import Simulator
-from habitat_sim.utils.common import (quat_from_angle_axis,
-                                      quat_from_two_vectors)
+from habitat_sim.utils.common import quat_from_angle_axis, quat_from_two_vectors
 from numpy import ndarray
 
 EPS_ARRAY = np.array([1e-5, 0.0, 1e-5])
@@ -20,11 +20,14 @@ class PoseSampler:
     rot_deg_delta: float
     height_min: float
     height_max: float
+    hfov_min: float
+    hfov_max: float
     max_vdelta: float
     max_hdelta: float
     pitch_bounds: Tuple[float]
     do_sample_height: bool
     sample_lookat_deg_delta: bool
+    cameras_per_agent_pose: int
 
     def __init__(
         self,
@@ -37,6 +40,9 @@ class PoseSampler:
         max_hdelta: float = 0.001,
         h_min: Optional[float] = None,
         h_max: Optional[float] = None,
+        hfov_min: int = 60,
+        hfov_max: int = 120,
+        cameras_per_agent_pose: int = 1,
         pitch_bounds: Tuple[float] = (-np.inf, np.inf),
         sample_lookat_deg_delta: Optional[float] = None,
         np_rng: Optional[np.random.Generator] = None,
@@ -48,9 +54,12 @@ class PoseSampler:
         self.rot_deg_delta = rot_deg_delta
         self.height_min = h_min
         self.height_max = h_max
+        self.hfov_min = hfov_min
+        self.hfov_max = hfov_max
         self.max_vdelta = max_vdelta
         self.max_hdelta = max_hdelta
         self.pitch_bounds = pitch_bounds
+        self.cameras_per_agent_pose = cameras_per_agent_pose
         self.do_sample_height = h_max is not None and h_min is not None
         self.sample_lookat_deg_delta = sample_lookat_deg_delta
         if np_rng is None:
@@ -78,11 +87,17 @@ class PoseSampler:
         snapped = np.asarray(self.sim.pathfinder.snap_point(p))
 
         is_navigable = self.sim.pathfinder.is_navigable(snapped)
-        h_delta = np.linalg.norm(np.array([p[0] - snapped[0], p[2] - snapped[2]]))
+        h_delta = np.linalg.norm(
+            np.array([p[0] - snapped[0], p[2] - snapped[2]])
+        )
         v_delta = abs(p[1] - snapped[1])
 
         # three conditions:
-        valid = is_navigable and v_delta < self.max_vdelta and h_delta < self.max_hdelta
+        valid = (
+            is_navigable
+            and v_delta < self.max_vdelta
+            and h_delta < self.max_hdelta
+        )
 
         return snapped, valid
 
@@ -103,7 +118,9 @@ class PoseSampler:
             radius_max = self.radius_max
 
         floor_height = self._get_floor_height(search_center)
-        search_center = np.array([search_center[0], floor_height, search_center[2]])
+        search_center = np.array(
+            [search_center[0], floor_height, search_center[2]]
+        )
 
         poses: List[AgentState] = []
 
@@ -150,17 +167,22 @@ class PoseSampler:
 
     def sample_camera_poses(
         self, agent_states: List[AgentState], obj: SemanticObject
-    ) -> List[AgentState]:
-        """Generates agent states that have the existing agent
-        position+rotation with new sensor states.
+    ) -> Tuple[List[AgentState], List[int]]:
+        """Generates sensor states for agent states. Samples the camera
+        height, a vertical view delta angle, and camera HFOV.
+        Returns:
+            List[AgentState]: list of agent states including camera extrinsics.
+            List[int]: list of HFOVs.
         """
         new_states = []
         for agent_state in agent_states:
             # infer sensor states
             self.sim.agents[0].set_state(agent_state)
-            ss = self.sim.agents[0].get_state().sensor_states
 
-            if self.do_sample_height:
+            for _ in range(self.cameras_per_agent_pose):
+                ss = deepcopy(self.sim.agents[0].get_state().sensor_states)
+
+                # sample a camera height
                 h = agent_state.position[1] + self.np_rng.uniform(
                     self.height_min, self.height_max
                 )
@@ -172,33 +194,45 @@ class PoseSampler:
                     for k, p in ss.items()
                 }
 
-            p = ss["color_sensor"].position - obj.aabb.center
-            phi = (np.pi / 2) - np.arccos(p[1] / np.linalg.norm(p))
+                p = ss["color_sensor"].position - obj.aabb.center
+                phi = (np.pi / 2) - np.arccos(p[1] / np.linalg.norm(p))
 
-            # sample an up-down angle
-            if self.sample_lookat_deg_delta is not None:
-                deg = self.np_rng.uniform(
-                    -self.sample_lookat_deg_delta, self.sample_lookat_deg_delta
+                # sample a vertical view delta angle
+                if self.sample_lookat_deg_delta is not None:
+                    deg = self.np_rng.uniform(
+                        -self.sample_lookat_deg_delta,
+                        self.sample_lookat_deg_delta,
+                    )
+                    phi = (phi + np.deg2rad(deg)) % (2 * np.pi)
+
+                look_up_angle = np.clip(
+                    -phi, self.pitch_bounds[0], self.pitch_bounds[1]
                 )
-                phi = (phi + np.deg2rad(deg)) % (2 * np.pi)
-
-            look_up_angle = np.clip(-phi, self.pitch_bounds[0], self.pitch_bounds[1])
-            quat = ss["color_sensor"].rotation * quat_from_angle_axis(
-                look_up_angle, habitat_sim.geo.RIGHT
-            )
-
-            new_states.append(
-                AgentState(
-                    position=agent_state.position,
-                    rotation=agent_state.rotation,
-                    sensor_states={
-                        k: SixDOFPose(position=p.position, rotation=quat)
-                        for k, p in ss.items()
-                    },
+                quat = ss["color_sensor"].rotation * quat_from_angle_axis(
+                    look_up_angle, habitat_sim.geo.RIGHT
                 )
-            )
 
-        return new_states
+                new_states.append(
+                    AgentState(
+                        position=agent_state.position,
+                        rotation=agent_state.rotation,
+                        sensor_states={
+                            k: SixDOFPose(position=p.position, rotation=quat)
+                            for k, p in ss.items()
+                        },
+                    )
+                )
 
-    def sample_poses(self, obj: SemanticObject) -> List[AgentState]:
-        return self.sample_camera_poses(self.sample_agent_poses_radially(obj), obj)
+        # sample camera parameters. just hfov for now.
+        hfovs = self.np_rng.integers(
+            self.hfov_min, self.hfov_max + 1, len(new_states)
+        )
+
+        return new_states, hfovs.tolist()
+
+    def sample_poses(
+        self, obj: SemanticObject
+    ) -> Tuple[List[AgentState], List[int]]:
+        return self.sample_camera_poses(
+            self.sample_agent_poses_radially(obj.aabb.center, obj), obj
+        )
