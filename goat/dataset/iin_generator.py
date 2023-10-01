@@ -2,9 +2,12 @@ import argparse
 import gzip
 import itertools
 import json
+import multiprocessing
 import os
 from typing import Any, Dict, List, Optional, Sequence, Tuple, Union
 
+import GPUtil
+import habitat
 import habitat_sim
 import numpy as np
 from habitat_sim import bindings as hsim
@@ -24,6 +27,7 @@ from goat.dataset.semantic_utils import (ObjectCategoryMapping,
                                          get_hm3d_semantic_scenes)
 from goat.dataset.visualization import (clear_log, log_text, plot_area,
                                         save_candidate_imgs)
+from goat.utils.utils import load_json
 
 
 class ImageGoalGenerator:
@@ -74,6 +78,9 @@ class ImageGoalGenerator:
         single_floor_threshold: float = 0.25,
         keep_metadata: bool = False,
         verbose: bool = False,
+        disable_euc_to_geo_ratio_check: bool = False,
+        device_id: int = 0,
+        allowed_instances: Dict[str, List] = {},
     ) -> None:
         self.semantic_spec_filepath = semantic_spec_filepath
         self.img_size = img_size
@@ -93,6 +100,9 @@ class ImageGoalGenerator:
         self.start_retries = start_retries
         self.single_floor_threshold = single_floor_threshold
         self.keep_metadata = keep_metadata
+        self.disable_euc_to_geo_ratio_check = disable_euc_to_geo_ratio_check
+        self.device_id = device_id
+        self.allowed_instances = allowed_instances
         self.cat_map = ObjectCategoryMapping(
             mapping_file=category_mapping_file, allowed_categories=categories
         )
@@ -103,7 +113,8 @@ class ImageGoalGenerator:
     def _config_sim(self, scene: str) -> Simulator:
         sim_cfg = hsim.SimulatorConfiguration()
         sim_cfg.enable_physics = False
-        sim_cfg.gpu_device_id = 0
+        sim_cfg.allow_sliding = False
+        sim_cfg.gpu_device_id = self.device_id
         sim_cfg.scene_dataset_config_file = self.semantic_spec_filepath
         sim_cfg.scene_id = scene
 
@@ -319,14 +330,15 @@ class ImageGoalGenerator:
                 ):
                     continue
 
-                euc_dist = np.linalg.norm(start_position - closest_pt).item()
-                dist_ratio = geo_dist / euc_dist
-                if dist_ratio < self.min_geo_to_euc_ratio:
-                    continue
+                euc_dist = np.linalg.norm(start_position - closest_pt)
+                if not self.disable_euc_to_geo_ratio_check:
+                    dist_ratio = geo_dist / euc_dist
+                    if dist_ratio < self.min_geo_to_euc_ratio:
+                        continue
 
-                # aggressive _ratio_sample_rate (copied from PointNav)
-                if np.random.rand() > (20 * (dist_ratio - 0.98) ** 2):
-                    continue
+                    # aggressive _ratio_sample_rate (copied from PointNav)
+                    if np.random.rand() > (20 * (dist_ratio - 0.98) ** 2):
+                        continue
 
                 # check that the shortest path points are all on the same floor
                 path = habitat_sim.ShortestPath()
@@ -512,13 +524,30 @@ class ImageGoalGenerator:
             if self.cat_map[o.category.name()] is not None
         ]
 
+        print(
+            "All object goals post filter: {} / {}".format(
+                len(objects), len(sim.semantic_scene.objects)
+            )
+        )
+
         image_goals = []
-        for obj in objects:
+        current_scene_allowed_instances = self.allowed_instances[
+            scene.split("/")[-1].split(".")[0]
+        ]
+        instance_count = 0
+        for obj in tqdm(objects):
+            if not obj.id in current_scene_allowed_instances:
+                continue
             g = self._make_goal(
                 sim, pose_sampler, obj, with_viewpoints, with_start_poses
             )
             if g is not None:
                 image_goals.append(g)
+        print(
+            "total instances: {}/ {}".format(
+                len(image_goals), len(current_scene_allowed_instances)
+            )
+        )
 
         sim.close()
         self.scene = None
@@ -692,9 +721,7 @@ class ImageGoalGenerator:
         return path.geodesic_distance, end_pt
 
     @staticmethod
-    def save_to_disk(dataset, scene: str, outpath: str):
-        split = os.path.dirname(scene).split("/")[-2]
-
+    def save_to_disk(dataset, scene: str, split: str, outpath: str):
         # save the split file if not exists
         split_file = os.path.join(outpath, split, f"{split}.json.gz")
         os.makedirs(os.path.dirname(split_file), exist_ok=True)
@@ -712,17 +739,26 @@ class ImageGoalGenerator:
             f.write(json.dumps(dataset))
 
 
-def make_scene_episodes(
-    scene: Union[str, Tuple[str, str]],
-    outpath: str,
-    hm3d_location: str,
-    save_metadata: bool,
-):
+def make_episodes_for_scene(args):
+    (
+        scene,
+        outpath,
+        device_id,
+        split,
+        start_poses_per_object,
+        episodes_per_object,
+        disable_euc_to_geo_ratio_check,
+    ) = args
+    if isinstance(scene, tuple) and outpath is None:
+        scene, outpath = scene
+
     x1, y1 = (0.0, 0.02)
     x2, y2 = (25.0, 0.6)
     m = (y2 - y1) / (x2 - x1)
     b = y2 - m * x2
     frame_cov_thresh_line = (m, b)
+    hm3d_location = "data/scene_datasets/hm3d/"
+    goat_metadata_dir = "data/hm3d_meta/goat_metadata/"
 
     scene_dataset_config = os.path.join(
         hm3d_location, "hm3d_annotated_basis.scene_dataset_config.json"
@@ -730,14 +766,12 @@ def make_scene_episodes(
     category_mapping_file = os.path.join(
         "goat/dataset/source_data", "Mp3d_category_mapping.tsv"
     )
-    categories = {
-        "chair": 0,
-        "bed": 1,
-        "plant": 2,
-        "toilet": 3,
-        "tv_monitor": 4,
-        "sofa": 5,
-    }
+    categories = load_json("data/hm3d_meta/ovon_categories.json")
+    allowed_instances = load_json(
+        os.path.join(
+            goat_metadata_dir, "{}_object_instances.json".format(split)
+        )
+    )
     iig_maker = ImageGoalGenerator(
         semantic_spec_filepath=scene_dataset_config,
         img_size=(512, 512),
@@ -756,57 +790,97 @@ def make_scene_episodes(
             "sample_lookat_deg_delta": 5.0,
         },
         category_mapping_file=category_mapping_file,
-        categories=categories.keys(),
+        categories=categories[split],
         min_object_coverage=0.7,
         frame_cov_thresh_line=frame_cov_thresh_line,
         voxel_size=0.05,
         dbscan_slack=0.01,
         goal_vp_cell_size=0.25,
         goal_vp_max_dist=1.0,
-        start_poses_per_obj=2000,
+        start_poses_per_obj=start_poses_per_object,
         start_poses_tilt_angle=30.0,
         start_distance_limits=(1.0, 30.0),
         min_geo_to_euc_ratio=1.05,
         start_retries=2000,
         single_floor_threshold=0.25,
-        keep_metadata=save_metadata,
+        keep_metadata=False,
         verbose=False,
+        disable_euc_to_geo_ratio_check=disable_euc_to_geo_ratio_check,
+        device_id=device_id,
+        allowed_instances=allowed_instances,
     )
 
     image_goals = iig_maker.make_image_goals(
         scene=scene, with_viewpoints=True, with_start_poses=True
     )
 
-    FRONT_STRIP = "/".join(hm3d_location.rstrip("/").split("/")[:-1])
-    if scene.startswith(FRONT_STRIP):
-        scene = scene[len(FRONT_STRIP) :]
-
     dataset_dict = iig_maker.goals_to_dataset(
         image_goals,
         scene,
         scene_config=f"./{scene_dataset_config}",
     )
-    iig_maker.save_to_disk(dataset_dict, scene, outpath)
-
-    if save_metadata:
-        # save metadata to disk for object analysis plots
-        split = os.path.dirname(scene).split("/")[-2]
-        short_scene = scene.split("/")[-1].split(".")[0]
-        metadata_f = os.path.join(
-            outpath, "metadata", split, f"{short_scene}.pkl"
-        )
-        os.makedirs(os.path.dirname(metadata_f), exist_ok=True)
-        iig_maker.save_metadata(metadata_f)
+    iig_maker.save_to_disk(dataset_dict, scene, split, outpath)
 
 
 def make_episodes_for_split(
     scenes: List[str],
+    split: str,
     outpath: str,
-    save_metadata: bool,
-    hm3d_location: str = "data/scene_datasets/hm3d/",
+    tasks_per_gpu: int = 1,
+    enable_multiprocessing: bool = False,
+    start_poses_per_object: int = 2000,
+    episodes_per_object: int = -1,
+    disable_euc_to_geo_ratio_check: bool = False,
 ):
-    for scene in tqdm(scenes, total=len(scenes), dynamic_ncols=True):
-        make_scene_episodes(scene, outpath, hm3d_location, save_metadata)
+    deviceIds = GPUtil.getAvailable(
+        order="memory", limit=1, maxLoad=1.0, maxMemory=1.0
+    )
+
+    if enable_multiprocessing:
+        gpus = len(GPUtil.getAvailable(limit=256))
+        cpu_threads = gpus * 16
+        print(
+            "In multiprocessing setup - cpu {}, GPU: {}".format(
+                cpu_threads, gpus
+            )
+        )
+
+        items = []
+        for i, s in enumerate(scenes):
+            deviceId = deviceIds[0]
+            if i < gpus * tasks_per_gpu or len(deviceIds) == 0:
+                deviceId = i % gpus
+            items.append(
+                (
+                    s,
+                    outpath.format(split),
+                    deviceId,
+                    split,
+                    start_poses_per_object,
+                    episodes_per_object,
+                    disable_euc_to_geo_ratio_check,
+                )
+            )
+
+        mp_ctx = multiprocessing.get_context("forkserver")
+        with mp_ctx.Pool(cpu_threads) as pool, tqdm(
+            total=len(scenes), position=0
+        ) as pbar:
+            for _ in pool.imap_unordered(make_episodes_for_scene, items):
+                pbar.update()
+    else:
+        for scene in tqdm(scenes, total=len(scenes), dynamic_ncols=True):
+            make_episodes_for_scene(
+                (
+                    scene,
+                    outpath.format(split),
+                    deviceIds[0],
+                    split,
+                    start_poses_per_object,
+                    episodes_per_object,
+                    disable_euc_to_geo_ratio_check,
+                )
+            )
 
 
 if __name__ == "__main__":
@@ -856,11 +930,6 @@ if __name__ == "__main__":
         action="store_true",
         dest="disable_euc_to_geo_ratio_check",
     )
-    parser.add_argument(
-        "--disable-wordnet-mapping",
-        action="store_true",
-        dest="disable_wordnet_mapping",
-    )
 
     args = parser.parse_args()
     scenes = None
@@ -884,5 +953,13 @@ if __name__ == "__main__":
     )
 
     # outpath = os.path.join(args.output_path, "{}/content/".format(args.split))
-
-    make_episodes_for_split(scenes, args.output_path, True)
+    make_episodes_for_split(
+        scenes,
+        args.split,
+        args.output_path,
+        args.tasks_per_gpu,
+        args.enable_multiprocessing,
+        args.start_poses_per_object,
+        args.episodes_per_object,
+        args.disable_euc_to_geo_ratio_check,
+    )
