@@ -18,16 +18,24 @@ from habitat_sim.utils.common import quat_from_two_vectors, quat_to_coeffs
 from numpy import ndarray
 from tqdm import tqdm
 
-from goat.dataset.pointcloud_utils import (mesh_to_scene,
-                                           points_to_surface_area,
-                                           points_to_surface_area_in_scene,
-                                           project_semantics_to_world)
+from goat.dataset.pointcloud_utils import (
+    mesh_to_scene,
+    points_to_surface_area,
+    points_to_surface_area_in_scene,
+    project_semantics_to_world,
+)
 from goat.dataset.pose_sampler import PoseSampler
-from goat.dataset.semantic_utils import (ObjectCategoryMapping,
-                                         get_hm3d_semantic_scenes)
-from goat.dataset.visualization import (clear_log, log_text, plot_area,
-                                        save_candidate_imgs)
-from goat.utils.utils import load_json
+from goat.dataset.semantic_utils import (
+    ObjectCategoryMapping,
+    get_hm3d_semantic_scenes,
+)
+from goat.dataset.visualization import (
+    clear_log,
+    log_text,
+    plot_area,
+    save_candidate_imgs,
+)
+from goat.utils.utils import load_json, write_dataset
 
 
 class ImageGoalGenerator:
@@ -362,8 +370,8 @@ class ImageGoalGenerator:
 
                 start_positions.append(start_position.tolist())
                 start_rotations.append(source_rotation)
-                geodesic_distances.append(geo_dist)
-                euclidean_distances.append(euc_dist)
+                geodesic_distances.append(float(geo_dist))
+                euclidean_distances.append(float(euc_dist))
                 break
 
             else:
@@ -734,8 +742,7 @@ class ImageGoalGenerator:
             outpath, split, "content", f"{short_scene_name}.json.gz"
         )
         os.makedirs(os.path.dirname(scene_file), exist_ok=True)
-        with gzip.open(scene_file, "wt") as f:
-            f.write(json.dumps(dataset))
+        write_dataset(dataset, scene_file)
 
 
 def make_episodes_for_scene(args):
