@@ -534,7 +534,6 @@ class ImageGoalGenerator:
         current_scene_allowed_instances = self.allowed_instances[
             scene.split("/")[-1].split(".")[0]
         ]
-        instance_count = 0
         for obj in tqdm(objects):
             if not obj.id in current_scene_allowed_instances:
                 continue
