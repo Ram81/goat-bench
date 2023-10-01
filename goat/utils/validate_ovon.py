@@ -43,19 +43,72 @@ def save_ovon_instances(path, output_path):
 
 
 def validate_lnav(path):
-    counts, train_categories = count_episodes(
-        os.path.join(path, "train", "content")
-    )
+    _, train_categories = count_episodes(os.path.join(path, "train", "content"))
 
-    counts, val_categories = count_episodes(
-        os.path.join(path, "val", "content")
-    )
+    _, val_categories = count_episodes(os.path.join(path, "val", "content"))
     val_seen_diff = set(val_categories.keys()) - set(train_categories.keys())
     print("Total train categories: {}".format(len(train_categories)))
 
     print(
         "Total diff val seen categories: {} - {}".format(
             len(val_seen_diff), len(val_categories)
+        )
+    )
+
+    splits = ["train", "val_seen", "val_unseen_easy", "val_unseen_hard"]
+    categories_by_split = {}
+    ovon_path = "data/datasets/ovon/hm3d/v5_final/"
+    for split in splits:
+        split_path = os.path.join(ovon_path, split, "content")
+        files = glob.glob(os.path.join(split_path, "*.json.gz"))
+        categories = []
+        for file in files:
+            dataset = load_dataset(file)
+            for cat, instances in dataset["goals_by_category"].items():
+                categories.append(cat.split("_")[1])
+        categories_by_split[split] = set(categories)
+
+    lnav_train_categories = list(train_categories.keys())
+    lnav_val_categories = list(val_categories.keys())
+
+    train_diff = set(lnav_train_categories) - categories_by_split["train"]
+    val_diff = (
+        set(lnav_val_categories)
+        - categories_by_split["val_seen"]
+        - categories_by_split["val_unseen_easy"]
+        - categories_by_split["val_unseen_hard"]
+    )
+    ovon_diff = categories_by_split["train"] - set(lnav_train_categories)
+    all_val_categories = (
+        list(categories_by_split["val_seen"])
+        + list(categories_by_split["val_unseen_easy"])
+        + list(categories_by_split["val_unseen_hard"])
+    )
+    ovon_val_diff = set(all_val_categories) - set(lnav_val_categories)
+    ovon_vue_diff = categories_by_split["val_unseen_easy"] - set(
+        lnav_val_categories
+    )
+    ovon_vuh_diff = categories_by_split["val_unseen_hard"] - set(
+        lnav_val_categories
+    )
+    print(
+        "Train categories in OVON: {} - {} - {}".format(
+            len(train_diff), len(ovon_diff), len(lnav_train_categories)
+        )
+    )
+    print(
+        "Val categories in OVON: {} - {} - {}".format(
+            len(val_diff), len(ovon_val_diff), len(lnav_val_categories)
+        )
+    )
+    print(
+        "Val unseen easy categories in OVON: {} - {}".format(
+            len(ovon_vue_diff), len(lnav_val_categories)
+        )
+    )
+    print(
+        "Val unseen hard categories in OVON: {} - {}".format(
+            len(ovon_vuh_diff), len(lnav_val_categories)
         )
     )
 
