@@ -6,3 +6,4 @@ trimesh
 seaborn
 open3d
 timm
+openai

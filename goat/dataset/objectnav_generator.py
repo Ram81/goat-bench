@@ -943,7 +943,7 @@ def make_episodes_for_scene(args):
         return
 
     # Load OVON whitelisted categories
-    categories = load_json("data/hm3d_meta/ovon_categories.json")
+    categories = load_json("data/hm3d_meta/ovon_categories_final_split.json")
     wordnet_mapping_file = "data/wordnet/wordnet_mapping.json"
     if disable_wordnet_label:
         wordnet_mapping_file = None

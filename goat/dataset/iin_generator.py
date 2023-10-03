@@ -18,23 +18,15 @@ from habitat_sim.utils.common import quat_from_two_vectors, quat_to_coeffs
 from numpy import ndarray
 from tqdm import tqdm
 
-from goat.dataset.pointcloud_utils import (
-    mesh_to_scene,
-    points_to_surface_area,
-    points_to_surface_area_in_scene,
-    project_semantics_to_world,
-)
+from goat.dataset.pointcloud_utils import (mesh_to_scene,
+                                           points_to_surface_area,
+                                           points_to_surface_area_in_scene,
+                                           project_semantics_to_world)
 from goat.dataset.pose_sampler import PoseSampler
-from goat.dataset.semantic_utils import (
-    ObjectCategoryMapping,
-    get_hm3d_semantic_scenes,
-)
-from goat.dataset.visualization import (
-    clear_log,
-    log_text,
-    plot_area,
-    save_candidate_imgs,
-)
+from goat.dataset.semantic_utils import (ObjectCategoryMapping,
+                                         get_hm3d_semantic_scenes)
+from goat.dataset.visualization import (clear_log, log_text, plot_area,
+                                        save_candidate_imgs)
 from goat.utils.utils import load_json, write_dataset
 
 
@@ -89,6 +81,7 @@ class ImageGoalGenerator:
         disable_euc_to_geo_ratio_check: bool = False,
         device_id: int = 0,
         allowed_instances: Dict[str, List] = {},
+        blacklist_categories: List[str] = [],
     ) -> None:
         self.semantic_spec_filepath = semantic_spec_filepath
         self.img_size = img_size
@@ -114,6 +107,11 @@ class ImageGoalGenerator:
         self.cat_map = ObjectCategoryMapping(
             mapping_file=category_mapping_file, allowed_categories=categories
         )
+        for category in blacklist_categories:
+            if self.cat_map.get(category) is not None:
+                print("Removing {} from category map".format(category))
+                self.cat_map._mapping.pop(category)
+
         self.verbose = verbose
         self.scene = None
         self.metadata = [] if self.keep_metadata else None
@@ -772,7 +770,7 @@ def make_episodes_for_scene(args):
     category_mapping_file = os.path.join(
         "goat/dataset/source_data", "Mp3d_category_mapping.tsv"
     )
-    categories = load_json("data/hm3d_meta/ovon_categories.json")
+    categories = load_json("data/hm3d_meta/ovon_categories_final_split.json")
     allowed_instances = load_json(
         os.path.join(
             goat_metadata_dir, "{}_object_instances.json".format(split)
@@ -814,6 +812,7 @@ def make_episodes_for_scene(args):
         disable_euc_to_geo_ratio_check=disable_euc_to_geo_ratio_check,
         device_id=device_id,
         allowed_instances=allowed_instances,
+        blacklist_categories=["window", "window frame", "window shade", "window shutter", "shade"],
     )
 
     image_goals = iig_maker.make_image_goals(
