@@ -23,18 +23,10 @@ from goat.dataset.languagenav_dataset import LanguageNavEpisode
 from goat.dataset.objectnav_generator import ObjectGoalGenerator
 from goat.dataset.pose_sampler import PoseSampler
 from goat.dataset.semantic_utils import get_hm3d_semantic_scenes
-from goat.dataset.visualization import (
-    draw_bbox_on_img,
-    get_bounding_box,
-    objects_in_view,
-)
-from goat.utils.utils import (
-    load_json,
-    load_pickle,
-    save_image,
-    save_pickle,
-    write_json,
-)
+from goat.dataset.visualization import (draw_bbox_on_img, get_bounding_box,
+                                        objects_in_view)
+from goat.utils.utils import (load_json, load_pickle, save_image, save_pickle,
+                              write_json)
 
 
 class LanguageGoalGenerator(ObjectGoalGenerator):
@@ -125,10 +117,10 @@ class LanguageGoalGenerator(ObjectGoalGenerator):
             observations, target_obj.semantic_id
         )
 
-        keep_goal = self._threshold_object_goals(frame_coverages)
+        # keep_goal = self._threshold_object_goals(frame_coverages)
 
-        if sum(keep_goal) == 0:
-            return None
+        # if sum(keep_goal) == 0:
+        #     return None
 
         observation = self.max_coverage_viewpoint(observations, frame_coverages)
 
@@ -166,7 +158,7 @@ class LanguageGoalGenerator(ObjectGoalGenerator):
             bbox_metadata
         )
 
-        if len(category_to_instance_map) < 3:
+        if len(category_to_instance_map) < 2:
             return None
 
         bboxes = [bbox["bbox"] for bbox in bbox_metadata]
@@ -320,10 +312,19 @@ class LanguageGoalGenerator(ObjectGoalGenerator):
         output_path = "{}/raw/{}".format(self.outpath, scene_id)
         os.makedirs(output_path, exist_ok=True)
 
+        current_scene_allowed_instances = self.allowed_instances[
+            scene.split("/")[-1].split(".")[0]
+        ]
+        allowed_categories = [
+            instance["category"]
+            for iid, instance in current_scene_allowed_instances.items()
+        ]
+
         objects = [
             o
             for o in sim.semantic_scene.objects
-            if self.cat_map[o.category.name()] is not None
+            # if self.cat_map[o.category.name()] is not None
+            if o.category.name() in allowed_categories
         ]
         self.semantic_id_to_obj = {
             o.semantic_id: o for o in sim.semantic_scene.objects
@@ -332,21 +333,26 @@ class LanguageGoalGenerator(ObjectGoalGenerator):
         language_goals = {}
         results = []
         promp_meta = {}
-        current_scene_allowed_instances = self.allowed_instances[
-            scene.split("/")[-1].split(".")[0]
-        ]
         if not os.path.exists("{}/{}.pkl".format(self.outpath, scene_id)):
             print("Computing language goals for scene: {}".format(scene_id))
+            filtered_by_lgoal = 0
+            filtered_by_vps = 0
             for obj in tqdm(objects, total=len(objects), dynamic_ncols=True):
-                if not obj.object_id in current_scene_allowed_instances:
+                if not obj.id in current_scene_allowed_instances:
                     continue
                 goal, prompt = self._make_goal(
                     sim, pose_sampler, obj, with_viewpoints, scene_id
                 )
+                if goal is None:
+                    filtered_by_vps += 1
+                    continue
+                if len(prompt["metadata"]) < 2:
+                    filtered_by_lgoal += 1
+                    continue
                 if (
                     goal is not None
                     and len(goal["view_points"]) > 0
-                    and len(prompt["metadata"]) > 2
+                    # and len(prompt["metadata"]) >= 2
                 ):
                     goal_uuid = "{}_{}".format(
                         goal["object_category"], obj.semantic_id
@@ -365,6 +371,11 @@ class LanguageGoalGenerator(ObjectGoalGenerator):
             write_json(
                 promp_meta,
                 "{}/{}_prompt_meta.json".format(self.outpath, scene_id),
+            )
+            print(
+                "Filtered by language goal: {} - {} - {}".format(
+                    filtered_by_lgoal, filtered_by_vps, len(objects)
+                )
             )
         else:
             print(
@@ -554,6 +565,7 @@ def make_episodes_for_scene(args):
             goat_metadata_dir, "{}_object_instances.json".format(split)
         )
     )
+    categories = load_json("data/hm3d_meta/ovon_categories_final_split.json")
 
     language_goal_maker = LanguageGoalGenerator(
         semantic_spec_filepath="data/scene_datasets/hm3d/hm3d_annotated_basis.scene_dataset_config.json",
@@ -571,7 +583,7 @@ def make_episodes_for_scene(args):
             "h_max": 1.4,
             "sample_lookat_deg_delta": 5.0,
         },
-        mapping_file="ovon/dataset/source_data/Mp3d_category_mapping.tsv",
+        mapping_file="goat/dataset/source_data/Mp3d_category_mapping.tsv",
         categories=None,
         coverage_meta_file="data/coverage_meta/{}.pkl".format(split),
         frame_cov_thresh=0.10,
@@ -590,7 +602,13 @@ def make_episodes_for_scene(args):
         visuals_dir=visuals_dir,
         outpath=outpath,
         caption_annotation_file=caption_annotation_file,
-        blacklist_categories=["window", "window frame"],
+        blacklist_categories=[
+            "window",
+            "window frame",
+            "window shade",
+            "window shutter",
+            "shade",
+        ],
         allowed_instances=allowed_instances,
     )
 
