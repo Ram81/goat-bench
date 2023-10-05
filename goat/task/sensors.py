@@ -310,3 +310,61 @@ class CurrentEpisodeUUIDSensor(Sensor):
             % 10**8
         )
         return episode_uuid
+
+
+@registry.register_sensor
+class LanguageGoalSensor(Sensor):
+    r"""A sensor for language goal specification as observations which is used in
+    Language Navigation.
+    Args:
+        sim: a reference to the simulator for calculating task observations.
+        config: a config for the ObjectGoalPromptSensor sensor. Can contain field
+            GOAL_SPEC that specifies which id use for goal specification,
+            GOAL_SPEC_MAX_VAL the maximum object_id possible used for
+            observation space definition.
+        dataset: a Object Goal navigation dataset that contains dictionaries
+        of categories id to text mapping.
+    """
+    cls_uuid: str = "language_goal"
+
+    def __init__(
+        self,
+        *args: Any,
+        config: "DictConfig",
+        **kwargs: Any,
+    ):
+        self.cache = load_pickle(config.cache)
+        super().__init__(config=config)
+
+    def _get_uuid(self, *args: Any, **kwargs: Any) -> str:
+        return self.cls_uuid
+
+    def _get_sensor_type(self, *args: Any, **kwargs: Any):
+        return SensorTypes.SEMANTIC
+
+    def _get_observation_space(self, *args: Any, **kwargs: Any):
+        return spaces.Box(
+            low=-np.inf, high=np.inf, shape=(768,), dtype=np.float32
+        )
+
+    def get_observation(
+        self,
+        observations,
+        *args: Any,
+        episode: Any,
+        **kwargs: Any,
+    ) -> Optional[int]:
+        uuid = episode.instructions[0].lower()
+        first_3_words = [
+            "prefix: instruction: go",
+            "instruction: find the",
+            "instruction: go to",
+            "api_failure",
+            "instruction: locate the",
+        ]
+        for prefix in first_3_words:
+            uuid = uuid.replace(prefix, "")
+            uuid = uuid.replace("\n", " ").strip()
+        if uuid not in self.cache:
+            print("Missing category: {}".format(uuid))
+        return self.cache[uuid]

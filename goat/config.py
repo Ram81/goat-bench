@@ -60,6 +60,12 @@ class CurrentEpisodeUUIDSensorConfig(LabSensorConfig):
 
 
 @dataclass
+class LanguageGoalSensorConfig(LabSensorConfig):
+    type: str = "LanguageGoalSensor"
+    cache: str = "data/clip_embeddings/goat/language_nav_train_bert.pkl"
+
+
+@dataclass
 class AngleSuccessMeasurementConfig(MeasurementConfig):
     type: str = "AngleSuccess"
     success_angle: float = 25.0
@@ -198,6 +204,13 @@ cs.store(
     group="habitat/task/lab_sensors",
     name="episode_start_uuid_sensor",
     node=EpisodeStartUUIDSensorConfig,
+)
+
+cs.store(
+    package=f"habitat.task.lab_sensors.language_goal_sensor",
+    group="habitat/task/lab_sensors",
+    name="language_goal_sensor",
+    node=LanguageGoalSensorConfig,
 )
 
 cs.store(
