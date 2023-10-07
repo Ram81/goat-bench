@@ -5,7 +5,8 @@ from habitat.core.embodied_task import Measure
 from habitat.core.logging import logger
 from habitat.core.registry import registry
 from habitat.core.simulator import Simulator
-from habitat.tasks.nav.nav import NavigationEpisode, NavigationTask
+from habitat.tasks.nav.nav import NavigationEpisode, NavigationTask, TopDownMap
+from habitat.utils.visualizations import fog_of_war, maps
 
 from goat.utils.utils import load_pickle
 
@@ -46,9 +47,7 @@ class OVONDistanceToGoal(Measure):
             ]
 
             if episode.children_object_categories is not None:
-                for (
-                    children_category
-                ) in episode.children_object_categories:
+                for children_category in episode.children_object_categories:
                     scene_id = episode.scene_id.split("/")[-1]
                     goal_key = f"{scene_id}_{children_category}"
 
@@ -164,15 +163,15 @@ class GOATTopDownMap(TopDownMap):
 
     def _draw_goals_positions(self, episode):
         if self._config.draw_goal_positions:
-
             for super_goals in episode.goals:
                 if type(super_goals[0]) != dict:
                     super_goals = super_goals[0]
                 for goal in super_goals:
-                    if self._is_on_same_floor(goal['position'][1]):
+                    if self._is_on_same_floor(goal["position"][1]):
                         try:
                             self._draw_point(
-                                goal['position'], maps.MAP_TARGET_POINT_INDICATOR
+                                goal["position"],
+                                maps.MAP_TARGET_POINT_INDICATOR,
                             )
                         except AttributeError:
                             pass

@@ -19,8 +19,9 @@ from habitat_baselines.utils.common import get_num_actions
 from torch import nn as nn
 from torchvision import transforms as T
 
-from goat.task.sensors import (ClipGoalSelectorSensor, ClipImageGoalSensor,
-                               ClipObjectGoalSensor, LanguageGoalSensor)
+from goat.task.sensors import (CacheImageGoalSensor, ClipGoalSelectorSensor,
+                               ClipImageGoalSensor, ClipObjectGoalSensor,
+                               LanguageGoalSensor)
 
 
 @baseline_registry.register_policy
@@ -163,6 +164,7 @@ class PointNavResNetCLIPNet(Net):
         depth_ckpt: str = "",
         add_clip_linear_projection: bool = False,
         add_language_linear_projection: bool = False,
+        add_instance_linear_projection: bool = False,
         late_fusion: bool = False,
     ):
         super().__init__()
@@ -170,6 +172,7 @@ class PointNavResNetCLIPNet(Net):
         self.discrete_actions = discrete_actions
         self.add_clip_linear_projection = add_clip_linear_projection
         self.add_language_linear_projection = add_language_linear_projection
+        self.add_instance_linear_projection = add_instance_linear_projection
         self.late_fusion = late_fusion
         self._n_prev_action = 32
         if discrete_actions:
@@ -247,6 +250,21 @@ class PointNavResNetCLIPNet(Net):
 
             rnn_input_size += language_goal_size
             rnn_input_size_info["language_goal"] = language_goal_size
+
+        if CacheImageGoalSensor.cls_uuid in observation_space.spaces:
+            embedding_dim = 1024
+            print(
+                f"InstanceImage embedding: {embedding_dim}, "
+                f"Add Instance linear: {add_instance_linear_projection}"
+            )
+            if self.add_instance_linear_projection:
+                self.instance_embedding = nn.Linear(embedding_dim, 256)
+                instance_goal_size = 256
+            else:
+                instance_goal_size = embedding_dim
+
+            rnn_input_size += instance_goal_size
+            rnn_input_size_info["instance_goal"] = instance_goal_size
 
         if EpisodicGPSSensor.cls_uuid in observation_space.spaces:
             input_gps_dim = observation_space.spaces[
@@ -359,9 +377,15 @@ class PointNavResNetCLIPNet(Net):
 
         if LanguageGoalSensor.cls_uuid in observations:
             language_goal = observations[LanguageGoalSensor.cls_uuid]
-            if self.add_clip_linear_projection:
+            if self.add_language_linear_projection:
                 language_goal = self.language_embedding(language_goal)
             x.append(language_goal)
+
+        if CacheImageGoalSensor.cls_uuid in observations:
+            instance_goal = observations[CacheImageGoalSensor.cls_uuid]
+            if self.add_instance_linear_projection:
+                instance_goal = self.instance_embedding(instance_goal)
+            x.append(instance_goal)
 
         if (
             ClipImageGoalSensor.cls_uuid in observations
