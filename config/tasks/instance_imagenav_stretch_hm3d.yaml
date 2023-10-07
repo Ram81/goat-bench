@@ -2,13 +2,14 @@
 
 defaults:
   - /habitat: habitat_config_base
-  - /habitat/task: imagenav
+  - /habitat/task: instance_imagenav
   - /habitat/simulator/agents@habitat.simulator.agents.main_agent: rgb_agent
+  - /habitat/dataset/instance_imagenav: hm3d_v2
   - _self_
 
 habitat:
   environment:
-    max_episode_steps: 500
+    max_episode_steps: 1000
 
   simulator:
     turn_angle: 30
@@ -27,8 +28,3 @@ habitat:
     habitat_sim_v0:
       gpu_device_id: 0
       allow_sliding: False
-
-  dataset:
-    type: PointNav-v1
-    split: train
-    data_path: data/datasets/imagenav/hm3d/v1_stretch/{split}/{split}.json.gz
