@@ -159,6 +159,22 @@ class CLIPWeakTransform(Transform):
         x = TF.normalize(x, self.mean, self.std)
         return x
 
+class CrocoTransform(Transform):
+    is_random: bool = True
+
+    def __init__(self, size):
+        self.size = size
+        self.mean = (0.485, 0.456, 0.406)
+        self.std = (0.229, 0.224, 0.225)
+
+    def apply(self, x):
+        x = x.permute(0, 3, 1, 2)
+        x = TF.resize(x, self.size, interpolation=TF.InterpolationMode.BICUBIC)
+        x = TF.center_crop(x, output_size=self.size)
+        x = x.float() / 255.0
+        x = TF.normalize(x, self.mean, self.std)
+        return x
+
 
 def get_transform(name, size):
     if name == "resize":
