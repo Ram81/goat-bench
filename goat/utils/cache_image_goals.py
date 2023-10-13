@@ -12,6 +12,7 @@ from habitat_baselines.config.default import get_config
 
 from goat.models.encoders.clip import CLIPEncoder
 from goat.models.encoders.vc1 import VC1Encoder
+from goal.models.encoders.croco2_encoder import Croco2Encoder
 from goat.utils.utils import save_image, save_pickle
 
 
@@ -40,6 +41,8 @@ class CacheGoals:
             self.encoder = VC1Encoder(device=self.device)
         elif "CLIP" in encoder:
             self.encoder = CLIPEncoder(device=self.device)
+        elif encoder == "CroCo-V2":
+            self.encoder = Croco2Encoder(device=self.device)
         else:
             raise NotImplementedError
 
@@ -87,21 +90,37 @@ class CacheGoals:
             goals_meta = []
             for goal_idx, img_goal in enumerate(goal_val.image_goals):
                 img = env.task.sensor_suite.sensors[
-                    "instance_imagegoal"
-                ]._get_instance_image_goal(img_goal)
+                        "instance_imagegoal"
+                    ]._get_instance_image_goal(img_goal)
 
                 if self.add_noise:
                     img = self.apply_noise(img)
 
-                vc1_embedding = self.encoder.embed_vision(img)
-                metadata = dict(
-                    hfov=img_goal.hfov,
-                    object_id=goal_val.object_id,
-                    position=img_goal.position,
-                    rotation=img_goal.rotation,
-                    goal_id=goal_idx,
-                    embedding=vc1_embedding,
-                )
+                if self.encoder_type == "VC-1":
+                    # vc1_file = f"vc1_embedding_{goal_idx}.npy"
+                    vc1_embedding = self.encoder.embed_vision(img)
+                
+                    metadata = dict(
+                        hfov=img_goal.hfov,
+                        object_id=goal_val.object_id,
+                        position=img_goal.position,
+                        rotation=img_goal.rotation,
+                        goal_id=goal_idx,
+                        embedding=vc1_embedding,
+                    )
+
+                elif self.encoder_type == "CroCo-V2":
+                    # croco_file = f"croco_embedding_{goal_idx}.npy"
+                    croco_embedding = self.encoder.embed_vision(img)
+                    
+                    metadata = dict(
+                        hfov=img_goal.hfov,
+                        object_id=goal_val.object_id,
+                        position=img_goal.position,
+                        rotation=img_goal.rotation,
+                        goal_id=goal_idx,
+                        embedding=croco_embedding,
+                    )
                 goals_meta.append(metadata)
 
             scene_id = goal_k.split("_")[0]

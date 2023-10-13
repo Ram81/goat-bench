@@ -633,7 +633,7 @@ class GoatGoalSensor(Sensor):
         observations,
         *args: Any,
         episode: Any,
-        task: Any,
+            task: Any,
         **kwargs: Any,
     ) -> np.ndarray:
         episode_id = f"{episode.scene_id}_{episode.episode_id}"
@@ -680,3 +680,63 @@ class GoatGoalSensor(Sensor):
             else:
                 raise NotImplementedError
         return output_embedding
+
+
+@registry.register_sensor
+class CacheCrocoImageGoalSensor(Sensor):
+    r"""A sensor for cached image goal specification from the croco ViT Encoder.
+
+    """
+    cls_uuid: str = "cache_croco_instance_imagegoal"
+
+    def __init__(
+        self,
+        *args: Any,
+        config: "DictConfig",
+        **kwargs: Any,
+    ):
+        self.cache_base_dir = config.cache
+        self.cache = None
+        self._current_scene_id = ""
+        self._current_episode_id = ""
+        self._current_episode_image_goal = None
+        super().__init__(config=config)
+
+    def _get_uuid(self, *args: Any, **kwargs: Any) -> str:
+        return self.cls_uuid
+
+    def _get_sensor_type(self, *args: Any, **kwargs: Any):
+        return SensorTypes.SEMANTIC
+
+    def _get_observation_space(self, *args: Any, **kwargs: Any):
+        return spaces.Tuple(
+            spaces.Box(
+                low=-np.inf, high=np.inf, shape=(196, 1024), dtype=np.float32
+            ),
+            spaces.Box(
+                low=-np.inf, high=np.inf, shape=(196, 2), dtype=np.float32
+            )
+        )
+
+    def get_observation(
+        self,
+        observations,
+        *args: Any,
+        episode: Any,
+        **kwargs: Any,
+    ) -> Optional[int]:
+        episode_id = f"{episode.scene_id}_{episode.episode_id}"
+        if self._current_scene_id != episode.scene_id:
+            self._current_scene_id = episode.scene_id
+            scene_id = episode.scene_id.split("/")[-1].split(".")[0]
+            self.cache = load_pickle(
+                os.path.join(self.cache_base_dir, f"{scene_id}_embedding.pkl")
+            )
+
+        if self._current_episode_id != episode_id:
+            self._current_episode_id = episode_id
+            self._current_episode_image_goal = self.cache[episode.goal_key][
+                episode.goal_image_id
+            ]["embedding"]
+
+        return self._current_episode_image_goal
