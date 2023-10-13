@@ -20,4 +20,4 @@ pip install -r requirements.txt
 pip install git+https://github.com/openai/CLIP.git
 
 # Clone croco
-git clone modelgit@github.com:naver/croco.git goat/models/encoders/croco
+git clone git@github.com:naver/croco.git goat/models/encoders/croco
