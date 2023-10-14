@@ -12,9 +12,16 @@ from habitat_baselines.config.default import get_config
 
 from goat.models.encoders.clip import CLIPEncoder
 from goat.models.encoders.vc1 import VC1Encoder
-from goal.models.encoders.croco2_encoder import Croco2Encoder
+from goat.models.encoders.croco2_encoder import Croco2Encoder
 from goat.utils.utils import save_image, save_pickle
 
+from habitat.config.default_structured_configs import register_hydra_plugin
+from goat.config import HabitatConfigPlugin
+
+
+def register_plugins():
+    register_hydra_plugin(HabitatConfigPlugin)
+register_plugins()
 
 class CacheGoals:
     def __init__(
@@ -109,7 +116,7 @@ class CacheGoals:
                         embedding=vc1_embedding,
                     )
 
-                elif self.encoder_type == "CroCo-V2":
+                elif self.encoder_type == "Croco-V2":
                     # croco_file = f"croco_embedding_{goal_idx}.npy"
                     croco_embedding = self.encoder.embed_vision(img)
                     

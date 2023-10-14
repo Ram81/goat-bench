@@ -1,4 +1,4 @@
-from typing import Any, Optional
+from typing import Dict
 
 import numpy as np
 import torch
@@ -6,27 +6,49 @@ from torch import nn as nn
 from torch.nn import functional as F
 from goat.models.encoders.croco2_vit_encoder import Croco2ViTEncoder
 from goat.models.encoders.croco2_vit_decoder import Croco2ViTDecoder
-from torchvision.transforms import ToTensor, Normalize, Compose
+from torchvision import transforms as T
+from gym import spaces
 
 
 class CrocoBinocularEncoder(nn.Module):
     def __init__(
         self,
+        observation_space: spaces.Dict,
         checkpoint: str,
         hidden_size: int,
-        visual_transform: Any = None,
     ):
         super().__init__()
         
-        self.visual_transform = visual_transform
+        self.goal_image = "instance_imagegoal" in observation_space.spaces
+        self.goal_features = "cache_instance_imagegoal" in observation_space.spaces
+        
+        imagenet_mean = [0.485, 0.456, 0.406]
+        imagenet_std = [0.229, 0.224, 0.225]
+        self.preprocess = T.Compose([
+            T.Resize(224, interpolation=T.InterpolationMode.BICUBIC),
+            T.CenterCrop(224),
+            T.ConvertImageDtype(torch.float),
+            T.Normalize(mean=imagenet_mean, std=imagenet_std)
+        ])
         ckpt = torch.load(checkpoint, 'cpu')
         self.encoder = Croco2ViTEncoder(**ckpt.get('croco_kwargs', {}))
         self.decoder = Croco2ViTDecoder(**ckpt.get('croco_kwargs', {}))
         encoder_weights = {k:v for k,v in ckpt['model'].items() if k.startswith('enc') or k.startswith('patch')}
         msg = self.encoder.load_state_dict(encoder_weights)
+        print(f"Loading Croco encoder weights from {ckpt}: {msg}")
         decoder_weights = {k:v for k,v in ckpt['model'].items() if k.startswith('dec') or k.startswith('patch')}
         msg = self.decoder.load_state_dict(decoder_weights)
-        
+        print(f"Loading Croco decoder weights from {ckpt}: {msg}")
+
+        print("Freezing Croco encoder parameters")
+        for param in self.encoder.parameters():
+            param.requires_grad = False
+        self.encoder.eval()
+        print("Freezing Croco decoder parameters")
+        for param in self.decoder.parameters():
+            param.requires_grad = False
+        self.decoder.eval()
+
         # TODO: Check if we should add linear here
         # OR if linear and flatten is okay at the goal_fc level
         # Original uses a single linear and flatten before passing to policy
@@ -39,18 +61,20 @@ class CrocoBinocularEncoder(nn.Module):
             )
         )
 
-    def forward(self, observations: "TensorDict") -> torch.Tensor:  # type: ignore
+    def forward(self, observations: Dict[str, torch.Tensor]) -> torch.Tensor:  # type: ignore
         rgb = observations["rgb"]
-        num_environments = rgb.size(0)
-        rgb = self.visual_transform(rgb, num_environments)
+        rgb = rgb.permute(0, 3, 1, 2) # BATCH x CHANNEL x HEIGHT X WIDTH
+        rgb = self.preprocess(rgb)
         rgb_feat, rgb_pos = self.encoder(rgb)
-        if "instance_imagegoal" in observations:
+
+        # NOTE: Do we need to handle the number of environments here in any way?
+        if self.goal_image:
             instance_imagegoal = observations["instance_imagegoal"]
-            instance_imagegoal = self.visual_transform(instance_imagegoal, num_environments)
+            instance_imagegoal = instance_imagegoal.permute(0, 3, 1, 2)
+            instance_imagegoal = self.visual_transform(instance_imagegoal)
             goal_feat, goal_pos = self.encoder(instance_imagegoal)
 
-        elif "cache_croco_instance_imagegoal" in observations:
-            # NOTE: Do we need to handle the number of environments here in any way?
+        elif self.goal_features:
             goal_feat, goal_pos = observations["cache_croco_instance_imagegoal"]
 
         else:

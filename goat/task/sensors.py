@@ -717,7 +717,6 @@ class CacheCrocoImageGoalSensor(Sensor):
                 low=-np.inf, high=np.inf, shape=(196, 2), dtype=np.float32
             )
         )
-
     def get_observation(
         self,
         observations,
