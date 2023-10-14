@@ -129,12 +129,84 @@ class OVONObjectGoalID(Measure):
 
 
 @registry.register_measure
-class GOATTopDownMap(TopDownMap):
+class GoatDistanceToGoal(Measure):
+    """The measure calculates a distance towards the goal."""
+
+    cls_uuid: str = "distance_to_goal"
+
+    def __init__(
+        self, sim: Simulator, config: "DictConfig", *args: Any, **kwargs: Any
+    ):
+        self._previous_position: Optional[Tuple[float, float, float]] = None
+        self._sim = sim
+        self._config = config
+        self._episode_view_points: Optional[
+            List[Tuple[float, float, float]]
+        ] = None
+        self._current_subtask_idx = 0
+
+        super().__init__(**kwargs)
+
+    def _get_uuid(self, *args: Any, **kwargs: Any) -> str:
+        return self.cls_uuid
+
+    def reset_metric(self, episode, task, *args: Any, **kwargs: Any):
+        self._previous_position = None
+        self._metric = None
+        self._current_subtask_idx = 0
+        self.update_metric(episode=episode, task=task, *args, **kwargs)
+
+    def update_metric(
+        self,
+        episode: NavigationEpisode,
+        task: NavigationTask,
+        *args: Any,
+        **kwargs: Any,
+    ):
+        current_position = self._sim.get_agent_state().position
+
+        if self._current_subtask_idx != task.active_subtask_idx:
+            self._previous_position = None
+            self._current_subtask_idx = task.active_subtask_idx
+            episode._shortest_path_cache = None
+
+        if self._current_subtask_idx == len(episode.tasks):
+            return
+
+        if self._previous_position is None or not np.allclose(
+            self._previous_position, current_position, atol=1e-4
+        ):
+            if self._config.distance_to == "VIEW_POINTS":
+                viewpoints = [
+                    view_point["agent_state"]["position"]
+                    for goal in episode.goals[task.active_subtask_idx]
+                    for view_point in goal["view_points"]
+                ]
+                distance_to_target = self._sim.geodesic_distance(
+                    current_position, viewpoints, episode
+                )
+            else:
+                logger.error(
+                    "Non valid distance_to parameter was provided"
+                    f"{self._config.distance_to}"
+                )
+                raise NotImplementedError
+
+            self._previous_position = (
+                current_position[0],
+                current_position[1],
+                current_position[2],
+            )
+            self._metric = distance_to_target
+
+
+@registry.register_measure
+class GoatTopDownMap(TopDownMap):
     r"""Top Down Map measure for GOAT task."""
 
     def __init__(
         self,
-        sim: "HabitatSim",
+        sim: Simulator,
         config: "DictConfig",
         *args: Any,
         **kwargs: Any,
