@@ -15,6 +15,7 @@ git clone --branch v0.2.3 git@github.com:facebookresearch/habitat-lab.git
 cd habitat-lab
 pip install -e habitat-lab
 pip install -e habitat-baselines
+cd ..
 
 pip install -r requirements.txt
 pip install git+https://github.com/openai/CLIP.git

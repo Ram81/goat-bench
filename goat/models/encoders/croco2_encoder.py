@@ -3,7 +3,7 @@ import torch
 
 from goat.models.encoders.base import Encoder
 from goat.models.encoders.croco2_vit_encoder import Croco2ViTEncoder
-from torchvision.transforms import ToTensor, Normalize, Compose
+from torchvision.transforms import Normalize, Compose, Resize, InterpolationMode, CenterCrop
 
 class Croco2Encoder(Encoder):
     def __init__(
@@ -12,7 +12,11 @@ class Croco2Encoder(Encoder):
         super().__init__()
         imagenet_mean = [0.485, 0.456, 0.406]
         imagenet_std = [0.229, 0.224, 0.225]
-        model_transforms = Compose([ToTensor(), Normalize(mean=imagenet_mean, std=imagenet_std)])
+        model_transforms = Compose([
+            Resize(224, interpolation=InterpolationMode.BICUBIC),
+            CenterCrop(224),
+            Normalize(mean=imagenet_mean, std=imagenet_std)
+        ])
         self.device = device
         ckpt = torch.load(ckpt_path, 'cpu')
         self.model = Croco2ViTEncoder(**ckpt.get('croco_kwargs', {})).to(device)
