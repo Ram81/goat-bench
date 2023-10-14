@@ -1,10 +1,18 @@
 from dataclasses import dataclass
 
 from habitat.config.default_structured_configs import (
-    CollisionsMeasurementConfig, HabitatConfig, LabSensorConfig,
-    MeasurementConfig, SimulatorConfig)
+    ActionConfig,
+    CollisionsMeasurementConfig,
+    HabitatConfig,
+    LabSensorConfig,
+    MeasurementConfig,
+    SimulatorConfig,
+)
 from habitat_baselines.config.default_structured_configs import (
-    HabitatBaselinesRLConfig, PolicyConfig, RLConfig)
+    HabitatBaselinesRLConfig,
+    PolicyConfig,
+    RLConfig,
+)
 from hydra.core.config_search_path import ConfigSearchPath
 from hydra.core.config_store import ConfigStore
 from hydra.plugins.search_path_plugin import SearchPathPlugin
@@ -22,6 +30,12 @@ class ClipObjectGoalSensorConfig(LabSensorConfig):
 @dataclass
 class OVONDistanceToGoalConfig(MeasurementConfig):
     type: str = "OVONDistanceToGoal"
+    distance_to: str = "VIEW_POINTS"
+
+
+@dataclass
+class GoatDistanceToGoalConfig(MeasurementConfig):
+    type: str = "GoatDistanceToGoal"
     distance_to: str = "VIEW_POINTS"
 
 
@@ -91,6 +105,15 @@ class ImageNavRewardMeasurementConfig(MeasurementConfig):
 class OVONObjectGoalIDMeasurementConfig(MeasurementConfig):
     type: str = "OVONObjectGoalID"
     cache: str = "data/clip_embeddings/ovon_stretch_final_cache.pkl"
+
+
+@dataclass
+class SubtaskStopActionConfig(ActionConfig):
+    r"""
+    In Goat task only, the subtask stop action is a discrete action.
+    When called, the agent will request to stop the subtask.
+    """
+    type: str = "SubtaskStopAction"
 
 
 @dataclass
@@ -227,6 +250,13 @@ cs.store(
 )
 
 cs.store(
+    package="habitat.task.measurements.goat_distance_to_goal",
+    group="habitat/task/measurements",
+    name="goat_distance_to_goal",
+    node=GoatDistanceToGoalConfig,
+)
+
+cs.store(
     package="habitat.task.measurements.angle_to_goal",
     group="habitat/task/measurements",
     name="angle_to_goal",
@@ -238,6 +268,13 @@ cs.store(
     group="habitat/task/measurements",
     name="imagenav_reward",
     node=ImageNavRewardMeasurementConfig,
+)
+
+cs.store(
+    package="habitat.task.actions.subtask_stop",
+    group="habitat/task/actions",
+    name="subtask_stop",
+    node=SubtaskStopActionConfig,
 )
 
 cs.store(
