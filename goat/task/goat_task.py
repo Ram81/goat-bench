@@ -77,14 +77,16 @@ class GoatTask(NavigationTask):  # TODO
     """
     is_sub_task_stop_called: bool = False
     active_subtask_idx: int = 0
+    last_action: Optional[SimulatorTaskAction] = None
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.is_sub_task_stop_called = False
         self.active_subtask_idx = 0
+        self.last_action = None
 
-    def _check_subtask_is_active(self, *args: Any, **kwargs: Any) -> bool:
-        return not getattr(self, "is_sub_task_stop_called", False)
+    def _subtask_stop_called(self, *args: Any, **kwargs: Any) -> bool:
+        return isinstance(self.last_action, SubtaskStopAction)
 
     def _check_episode_is_active(
         self, episode, *args: Any, **kwargs: Any
@@ -92,6 +94,17 @@ class GoatTask(NavigationTask):  # TODO
         return not getattr(
             self, "is_stop_called", False
         ) and self.active_subtask_idx < len(episode.goals)
+
+    def step(self, action: Dict[str, Any], episode: GoatEpisode):
+        action_name = action["action"]
+        if "action_args" not in action or action["action_args"] is None:
+            action["action_args"] = {}
+        if isinstance(action_name, (int, np.integer)):
+            action_name = self.get_action_name(action_name)
+        task_action = self.actions[action_name]
+        observations = super().step(action, episode)
+        self.last_action = task_action
+        return observations
 
 
 @registry.register_task_action

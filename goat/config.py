@@ -40,6 +40,17 @@ class GoatDistanceToGoalConfig(MeasurementConfig):
 
 
 @dataclass
+class GoatSuccessConfig(MeasurementConfig):
+    type: str = "GoatSuccess"
+    success_distance: float = 0.25
+
+
+@dataclass
+class GoatSPLConfig(MeasurementConfig):
+    type: str = "GoatSPL"
+
+
+@dataclass
 class ClipImageGoalSensorConfig(LabSensorConfig):
     type: str = "ClipImageGoalSensor"
 
