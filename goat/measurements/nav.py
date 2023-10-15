@@ -1,4 +1,5 @@
-from typing import TYPE_CHECKING, Any, List, Optional, Tuple
+from collections import defaultdict
+from typing import TYPE_CHECKING, Any, List, Optional, Tuple, Union
 
 import numpy as np
 from habitat.core.embodied_task import Measure
@@ -8,6 +9,7 @@ from habitat.core.simulator import Simulator
 from habitat.tasks.nav.nav import NavigationEpisode, NavigationTask, TopDownMap
 from habitat.utils.visualizations import fog_of_war, maps
 
+from goat.task.goat_task import SubtaskStopAction
 from goat.utils.utils import load_pickle
 
 if TYPE_CHECKING:
@@ -144,6 +146,7 @@ class GoatDistanceToGoal(Measure):
             List[Tuple[float, float, float]]
         ] = None
         self._current_subtask_idx = 0
+        self.prev_distance_to_target = 0
 
         super().__init__(**kwargs)
 
@@ -152,8 +155,9 @@ class GoatDistanceToGoal(Measure):
 
     def reset_metric(self, episode, task, *args: Any, **kwargs: Any):
         self._previous_position = None
-        self._metric = None
+        self._metric = {"distance_to_target": 0, "prev_distance_to_target": 0}
         self._current_subtask_idx = 0
+        self.prev_distance_to_target = 0
         self.update_metric(episode=episode, task=task, *args, **kwargs)
 
     def update_metric(
@@ -165,12 +169,17 @@ class GoatDistanceToGoal(Measure):
     ):
         current_position = self._sim.get_agent_state().position
 
+        self.prev_distance_to_target = self._metric["distance_to_target"]
         if self._current_subtask_idx != task.active_subtask_idx:
             self._previous_position = None
             self._current_subtask_idx = task.active_subtask_idx
             episode._shortest_path_cache = None
 
         if self._current_subtask_idx == len(episode.tasks):
+            self._metric = {
+                "distance_to_target": self._metric["distance_to_target"],
+                "prev_distance_to_target": self.prev_distance_to_target,
+            }
             return
 
         if self._previous_position is None or not np.allclose(
@@ -197,7 +206,189 @@ class GoatDistanceToGoal(Measure):
                 current_position[1],
                 current_position[2],
             )
-            self._metric = distance_to_target
+            self._metric = {
+                "distance_to_target": distance_to_target,
+                "prev_distance_to_target": self.prev_distance_to_target,
+            }
+
+
+@registry.register_measure
+class GoatSuccess(Measure):
+    """The measure calculates a distance towards the goal."""
+
+    cls_uuid: str = "success"
+
+    def __init__(
+        self, sim: Simulator, config: "DictConfig", *args: Any, **kwargs: Any
+    ):
+        self._previous_position: Optional[Tuple[float, float, float]] = None
+        self._sim = sim
+        self._config = config
+        self._current_subtask_idx = 0
+        self._success_by_subtasks = defaultdict(int)
+        self._subtask_counts = defaultdict(int)
+
+        super().__init__(**kwargs)
+
+    def _get_uuid(self, *args: Any, **kwargs: Any) -> str:
+        return self.cls_uuid
+
+    def reset_metric(self, episode, task, *args: Any, **kwargs: Any):
+        task.measurements.check_measure_dependencies(
+            self.uuid, [GoatDistanceToGoal.cls_uuid]
+        )
+        self._previous_position = None
+        self._metric = None
+        self._current_subtask_idx = 0
+        self._success_by_subtasks = defaultdict(int)
+        self._subtask_counts = defaultdict(int)
+        self._subtask_success = [0.0] * len(episode.tasks)
+
+        for t in episode.tasks:
+            self._subtask_counts[t[1]] += 1
+
+        self.update_metric(episode=episode, task=task, *args, **kwargs)
+
+    def update_metric(
+        self,
+        episode: NavigationEpisode,
+        task: NavigationTask,
+        *args: Any,
+        **kwargs: Any,
+    ):
+        if self._current_subtask_idx == len(episode.tasks):
+            return
+
+        distance_to_target = task.measurements.measures[
+            GoatDistanceToGoal.cls_uuid
+        ].get_metric()
+
+        # print(
+        #     "Task id: {} - {} - {} - {}".format(
+        #         self._current_subtask_idx,
+        #         self._success_by_subtasks,
+        #         distance_to_target,
+        #         task._subtask_stop_called(),
+        #     )
+        # )
+
+        if (
+            task._subtask_stop_called()
+            and distance_to_target["prev_distance_to_target"]
+            < self._config.success_distance
+        ):
+            self._success_by_subtasks[
+                episode.tasks[self._current_subtask_idx][1]
+            ] += 1
+            self._subtask_success[self._current_subtask_idx] = 1.0
+
+        success_by_subtask = {}
+        for k, v in self._subtask_counts.items():
+            success_by_subtask["{}_success".format(k)] = (
+                self._success_by_subtasks[k] / self._subtask_counts[k]
+            )
+
+        self._metric = {
+            "composite_success": sum(self._success_by_subtasks.values())
+            / sum(self._subtask_counts.values()),
+            **success_by_subtask,
+            "subtask_success": self._subtask_success,
+        }
+
+        if self._current_subtask_idx != task.active_subtask_idx:
+            self._current_subtask_idx = task.active_subtask_idx
+
+
+@registry.register_measure
+class GoatSPL(Measure):
+    """The measure calculates a distance towards the goal."""
+
+    cls_uuid: str = "spl"
+
+    def __init__(
+        self, sim: Simulator, config: "DictConfig", *args: Any, **kwargs: Any
+    ):
+        self._previous_position: Union[None, np.ndarray, List[float]] = None
+        self._start_end_episode_distance: Optional[float] = None
+        self._agent_episode_distance: Optional[float] = None
+        self._current_subtask_idx = 0
+        self._sim = sim
+        self._config = config
+
+        super().__init__()
+
+    def _get_uuid(self, *args: Any, **kwargs: Any) -> str:
+        return "spl"
+
+    def reset_metric(self, episode, task, *args: Any, **kwargs: Any):
+        task.measurements.check_measure_dependencies(
+            self.uuid, [GoatDistanceToGoal.cls_uuid, GoatSuccess.cls_uuid]
+        )
+
+        self._previous_position = self._sim.get_agent_state().position
+        self._agent_episode_distance = 0.0
+        self._start_end_episode_distance = task.measurements.measures[
+            GoatDistanceToGoal.cls_uuid
+        ].get_metric()["distance_to_target"]
+        self._current_subtask_idx = 0
+
+        self._spl_by_subtasks = defaultdict(int)
+        self._subtask_counts = defaultdict(int)
+
+        for t in episode.tasks:
+            self._subtask_counts[t[1]] += 1
+
+        self.update_metric(  # type:ignore
+            episode=episode, task=task, *args, **kwargs
+        )
+
+    def _euclidean_distance(self, position_a, position_b):
+        return np.linalg.norm(position_b - position_a, ord=2)
+
+    def update_metric(
+        self, episode, task: NavigationTask, *args: Any, **kwargs: Any
+    ):
+        ep_success = task.measurements.measures[
+            GoatSuccess.cls_uuid
+        ].get_metric()["subtask_success"]
+
+        current_position = self._sim.get_agent_state().position
+        self._agent_episode_distance += self._euclidean_distance(
+            current_position, self._previous_position
+        )
+
+        self._previous_position = current_position
+
+        if ep_success[self._current_subtask_idx]:
+            spl = ep_success[self._current_subtask_idx] * (
+                self._start_end_episode_distance
+                / max(
+                    self._start_end_episode_distance,
+                    self._agent_episode_distance,
+                )
+            )
+            self._spl_by_subtasks[
+                episode.tasks[self._current_subtask_idx][1]
+            ] += spl
+
+        spl_by_subtask = {}
+        for k, v in self._subtask_counts.items():
+            spl_by_subtask["{}_spl".format(k)] = (
+                self._spl_by_subtasks[k] / self._subtask_counts[k]
+            )
+
+        self._metric = {
+            "composite_success": sum(self._spl_by_subtasks.values())
+            / sum(self._subtask_counts.values()),
+            **spl_by_subtask,
+        }
+
+        if self._current_subtask_idx != task.active_subtask_idx:
+            self._current_subtask_idx = task.active_subtask_idx
+            self._start_end_episode_distance = task.measurements.measures[
+                GoatDistanceToGoal.cls_uuid
+            ].get_metric()["distance_to_target"]
+            self._agent_episode_distance = 0
 
 
 @registry.register_measure
