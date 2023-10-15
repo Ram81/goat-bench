@@ -51,6 +51,11 @@ class GoatSPLConfig(MeasurementConfig):
 
 
 @dataclass
+class GoatSoftSPLConfig(MeasurementConfig):
+    type: str = "GoatSoftSPL"
+
+
+@dataclass
 class ClipImageGoalSensorConfig(LabSensorConfig):
     type: str = "ClipImageGoalSensor"
 

@@ -378,9 +378,104 @@ class GoatSPL(Measure):
             )
 
         self._metric = {
-            "composite_success": sum(self._spl_by_subtasks.values())
+            "composite_spl": sum(self._spl_by_subtasks.values())
             / sum(self._subtask_counts.values()),
             **spl_by_subtask,
+        }
+
+        if self._current_subtask_idx != task.active_subtask_idx:
+            self._current_subtask_idx = task.active_subtask_idx
+            self._start_end_episode_distance = task.measurements.measures[
+                GoatDistanceToGoal.cls_uuid
+            ].get_metric()["distance_to_target"]
+            self._agent_episode_distance = 0
+
+
+@registry.register_measure
+class GoatSoftSPL(Measure):
+    """The measure calculates a SoftSPL."""
+
+    cls_uuid: str = "soft_spl"
+
+    def __init__(
+        self, sim: Simulator, config: "DictConfig", *args: Any, **kwargs: Any
+    ):
+        self._previous_position: Union[None, np.ndarray, List[float]] = None
+        self._start_end_episode_distance: Optional[float] = None
+        self._agent_episode_distance: Optional[float] = None
+        self._current_subtask_idx = 0
+        self._sim = sim
+        self._config = config
+
+        super().__init__()
+
+    def _get_uuid(self, *args: Any, **kwargs: Any) -> str:
+        return "soft_spl"
+
+    def reset_metric(self, episode, task, *args: Any, **kwargs: Any):
+        task.measurements.check_measure_dependencies(
+            self.uuid, [GoatDistanceToGoal.cls_uuid, GoatSuccess.cls_uuid]
+        )
+
+        self._previous_position = self._sim.get_agent_state().position
+        self._agent_episode_distance = 0.0
+        self._start_end_episode_distance = task.measurements.measures[
+            GoatDistanceToGoal.cls_uuid
+        ].get_metric()["distance_to_target"]
+        self._current_subtask_idx = 0
+
+        self._softspl_by_subtasks = defaultdict(int)
+        self._subtask_counts = defaultdict(int)
+
+        for t in episode.tasks:
+            self._subtask_counts[t[1]] += 1
+
+        self.update_metric(  # type:ignore
+            episode=episode, task=task, *args, **kwargs
+        )
+
+    def _euclidean_distance(self, position_a, position_b):
+        return np.linalg.norm(position_b - position_a, ord=2)
+
+    def update_metric(
+        self, episode, task: NavigationTask, *args: Any, **kwargs: Any
+    ):
+        distance_to_target = task.measurements.measures[
+            GoatDistanceToGoal.cls_uuid
+        ].get_metric()["prev_distance_to_target"]
+
+        current_position = self._sim.get_agent_state().position
+        self._agent_episode_distance += self._euclidean_distance(
+            current_position, self._previous_position
+        )
+
+        self._previous_position = current_position
+
+        if task._subtask_stop_called():
+            ep_soft_success = max(
+                0, (1 - distance_to_target / self._start_end_episode_distance)
+            )
+            soft_spl = ep_soft_success * (
+                self._start_end_episode_distance
+                / max(
+                    self._start_end_episode_distance,
+                    self._agent_episode_distance,
+                )
+            )
+            self._softspl_by_subtasks[
+                episode.tasks[self._current_subtask_idx][1]
+            ] += soft_spl
+
+        softspl_by_subtask = {}
+        for k, v in self._subtask_counts.items():
+            softspl_by_subtask["{}_softspl".format(k)] = (
+                self._softspl_by_subtasks[k] / self._subtask_counts[k]
+            )
+
+        self._metric = {
+            "composite_softspl": sum(self._softspl_by_subtasks.values())
+            / sum(self._subtask_counts.values()),
+            **softspl_by_subtask,
         }
 
         if self._current_subtask_idx != task.active_subtask_idx:
