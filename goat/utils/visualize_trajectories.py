@@ -21,6 +21,7 @@ from tqdm import tqdm
 from goat.config import (
     ClipObjectGoalSensorConfig,
     GoatDistanceToGoalConfig,
+    GoatSoftSPLConfig,
     GoatSPLConfig,
     GoatSuccessConfig,
 )
@@ -67,6 +68,7 @@ def generate_trajectories(cfg, video_dir="", num_episodes=1):
     with habitat.Env(cfg) as env:
         goal_radius = 0.1
         spl = defaultdict(float)
+        softspl = defaultdict(float)
         total_success = defaultdict(float)
         total_episodes = 0.0
         scene_id = env._current_episode.scene_id.split("/")[-1].split(".")[0]
@@ -135,6 +137,9 @@ def generate_trajectories(cfg, video_dir="", num_episodes=1):
             for k, v in info["spl"].items():
                 spl[k] += v
 
+            for k, v in info["soft_spl"].items():
+                softspl[k] += v
+
             # spl += info["spl"]
             total_episodes += 1
 
@@ -145,6 +150,7 @@ def generate_trajectories(cfg, video_dir="", num_episodes=1):
 
         print("\n\nEpisode success: {}".format(total_success))
         print("SPL: {}, {}".format(spl, total_episodes))
+        print("SoftSPL: {}, {}".format(softspl, total_episodes))
         print("Success: {}, {}".format(total_success, total_episodes))
 
 
@@ -173,6 +179,7 @@ def main():
         del config.habitat.task.measurements["distance_to_goal_reward"]
         config.habitat.task.measurements.success = GoatSuccessConfig()
         config.habitat.task.measurements.spl = GoatSPLConfig()
+        config.habitat.task.measurements.soft_spl = GoatSoftSPLConfig()
         config.habitat.task.measurements.success.success_distance = 0.25
 
     generate_trajectories(
