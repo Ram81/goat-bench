@@ -1,5 +1,6 @@
 import argparse
 import os
+from collections import defaultdict
 
 import habitat
 import habitat_sim
@@ -20,7 +21,8 @@ from tqdm import tqdm
 from goat.config import (
     ClipObjectGoalSensorConfig,
     GoatDistanceToGoalConfig,
-    OVONDistanceToGoalConfig,
+    GoatSPLConfig,
+    GoatSuccessConfig,
 )
 from goat.dataset import goat_dataset, ovon_dataset
 
@@ -64,8 +66,8 @@ def generate_trajectories(cfg, video_dir="", num_episodes=1):
     os.makedirs(video_dir, exist_ok=True)
     with habitat.Env(cfg) as env:
         goal_radius = 0.1
-        spl = 0
-        total_success = 0.0
+        spl = defaultdict(float)
+        total_success = defaultdict(float)
         total_episodes = 0.0
         scene_id = env._current_episode.scene_id.split("/")[-1].split(".")[0]
 
@@ -89,7 +91,7 @@ def generate_trajectories(cfg, video_dir="", num_episodes=1):
 
                 if (
                     "distance_to_goal" in info.keys()
-                    and info["distance_to_goal"] < 0.1
+                    and info["distance_to_goal"]["distance_to_target"] < 0.1
                     and best_action != HabitatSimActions.stop
                 ):
                     best_action = HabitatSimActions.subtask_stop
@@ -125,8 +127,15 @@ def generate_trajectories(cfg, video_dir="", num_episodes=1):
 
                 success = info["success"]
 
-            total_success += success
-            spl += info["spl"]
+            for k, v in success.items():
+                if isinstance(v, list):
+                    continue
+                total_success[k] += v
+
+            for k, v in info["spl"].items():
+                spl[k] += v
+
+            # spl += info["spl"]
             total_episodes += 1
 
             make_videos(
@@ -134,15 +143,9 @@ def generate_trajectories(cfg, video_dir="", num_episodes=1):
             )
         print("Total episodes: {}".format(total_episodes))
 
-        print("\n\nEpisode success: {}".format(total_success / total_episodes))
-        print(
-            "SPL: {}, {}, {}".format(spl / total_episodes, spl, total_episodes)
-        )
-        print(
-            "Success: {}, {}, {}".format(
-                total_success / total_episodes, total_success, total_episodes
-            )
-        )
+        print("\n\nEpisode success: {}".format(total_success))
+        print("SPL: {}, {}".format(spl, total_episodes))
+        print("Success: {}, {}".format(total_success, total_episodes))
 
 
 def main():
@@ -166,6 +169,10 @@ def main():
         config.habitat.task.measurements.distance_to_goal = (
             GoatDistanceToGoalConfig()
         )
+        del config.habitat.task.measurements["soft_spl"]
+        del config.habitat.task.measurements["distance_to_goal_reward"]
+        config.habitat.task.measurements.success = GoatSuccessConfig()
+        config.habitat.task.measurements.spl = GoatSPLConfig()
         config.habitat.task.measurements.success.success_distance = 0.25
 
     generate_trajectories(
