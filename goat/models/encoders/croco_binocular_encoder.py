@@ -20,7 +20,7 @@ class CrocoBinocularEncoder(nn.Module):
         super().__init__()
         
         self.goal_image = "instance_imagegoal" in observation_space.spaces
-        self.goal_features = "cache_instance_imagegoal" in observation_space.spaces
+        self.goal_features = "cache_croco_goal_feat" in observation_space.spaces and "cache_croco_goal_pos" in observation_space.spaces
         
         imagenet_mean = [0.485, 0.456, 0.406]
         imagenet_std = [0.229, 0.224, 0.225]
@@ -35,10 +35,10 @@ class CrocoBinocularEncoder(nn.Module):
         self.decoder = Croco2ViTDecoder(**ckpt.get('croco_kwargs', {}))
         encoder_weights = {k:v for k,v in ckpt['model'].items() if k.startswith('enc') or k.startswith('patch')}
         msg = self.encoder.load_state_dict(encoder_weights)
-        print(f"Loading Croco encoder weights from {ckpt}: {msg}")
+        print(f"Loading Croco encoder weights from {checkpoint}: {msg}")
         decoder_weights = {k:v for k,v in ckpt['model'].items() if k.startswith('dec') or k.startswith('patch')}
         msg = self.decoder.load_state_dict(decoder_weights)
-        print(f"Loading Croco decoder weights from {ckpt}: {msg}")
+        print(f"Loading Croco decoder weights from {checkpoint}: {msg}")
 
         print("Freezing Croco encoder parameters")
         for param in self.encoder.parameters():
@@ -49,19 +49,20 @@ class CrocoBinocularEncoder(nn.Module):
             param.requires_grad = False
         self.decoder.eval()
 
+        dec_embed_dim = ckpt['croco_kwargs']['dec_embed_dim']
         # TODO: Check if we should add linear here
         # OR if linear and flatten is okay at the goal_fc level
         # Original uses a single linear and flatten before passing to policy
         # TODO: Check if should add a ReLU here, not mentioned in the paper
         self.fc = nn.Sequential(
-            nn.Flatten(),
             nn.Linear(
-                self.visual_encoder.output_size,
+                dec_embed_dim,
                 hidden_size,
-            )
+            ),
+            nn.Flatten()
         )
 
-    def forward(self, observations: Dict[str, torch.Tensor]) -> torch.Tensor:  # type: ignore
+    def forward(self, observations) -> torch.Tensor:  # type: ignore
         rgb = observations["rgb"]
         rgb = rgb.permute(0, 3, 1, 2) # BATCH x CHANNEL x HEIGHT X WIDTH
         rgb = self.preprocess(rgb)
@@ -75,11 +76,11 @@ class CrocoBinocularEncoder(nn.Module):
             goal_feat, goal_pos = self.encoder(instance_imagegoal)
 
         elif self.goal_features:
-            goal_feat, goal_pos = observations["cache_croco_instance_imagegoal"]
+            goal_feat, goal_pos = observations["cache_croco_goal_feat"], observations["cache_croco_goal_pos"]
 
         else:
             raise NotImplementedError("Required observations not found.")
-        
+
         x = self.decoder(rgb_feat, rgb_pos, goal_feat, goal_pos)
         
         x = self.fc(x)

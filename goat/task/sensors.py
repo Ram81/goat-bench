@@ -739,3 +739,124 @@ class CacheCrocoImageGoalSensor(Sensor):
             ]["embedding"]
 
         return self._current_episode_image_goal
+
+
+@registry.register_sensor
+class CacheCrocoGoalFeatSensor(Sensor):
+    r"""A sensor for Image goal specification as observations which is used in IIN.
+    Args:
+        sim: a reference to the simulator for calculating task observations.
+        config: a config for the ObjectGoalPromptSensor sensor. Can contain field
+            GOAL_SPEC that specifies which id use for goal specification,
+            GOAL_SPEC_MAX_VAL the maximum object_id possible used for
+            observation space definition.
+        dataset: a Object Goal navigation dataset that contains dictionaries
+        of categories id to text mapping.
+    """
+    cls_uuid: str = "cache_croco_goal_feat"
+
+    def __init__(
+        self,
+        *args: Any,
+        config: "DictConfig",
+        **kwargs: Any,
+    ):
+        self.cache_base_dir = config.cache
+        self._current_scene_id = ""
+        self._current_episode_id = ""
+        self._current_episode_image_goal = None
+        super().__init__(config=config)
+
+    def _get_uuid(self, *args: Any, **kwargs: Any) -> str:
+        return self.cls_uuid
+
+    def _get_sensor_type(self, *args: Any, **kwargs: Any):
+        return SensorTypes.SEMANTIC
+
+    def _get_observation_space(self, *args: Any, **kwargs: Any):
+        return spaces.Box(
+            low=-np.inf, high=np.inf, shape=(196, 1024), dtype=np.float32
+        )
+
+    def get_observation(
+        self,
+        observations,
+        *args: Any,
+        episode: Any,
+        **kwargs: Any,
+    ) -> Optional[int]:
+        episode_id = f"{episode.scene_id}_{episode.episode_id}"
+        if self._current_scene_id != episode.scene_id:
+            self._current_scene_id = episode.scene_id
+            scene_id = episode.scene_id.split("/")[-1].split(".")[0]
+            self.cache = load_pickle(
+                os.path.join(self.cache_base_dir, f"{scene_id}_embedding.pkl")
+            )
+
+        if self._current_episode_id != episode_id:
+            self._current_episode_id = episode_id
+            self._current_episode_image_goal = self.cache[episode.goal_key][
+                episode.goal_image_id
+            ]["embedding"][0]
+
+        return self._current_episode_image_goal
+
+@registry.register_sensor
+class CacheCrocoGoalPosSensor(Sensor):
+    r"""A sensor for Image goal specification as observations which is used in IIN.
+    Args:
+        sim: a reference to the simulator for calculating task observations.
+        config: a config for the ObjectGoalPromptSensor sensor. Can contain field
+            GOAL_SPEC that specifies which id use for goal specification,
+            GOAL_SPEC_MAX_VAL the maximum object_id possible used for
+            observation space definition.
+        dataset: a Object Goal navigation dataset that contains dictionaries
+        of categories id to text mapping.
+    """
+    cls_uuid: str = "cache_croco_goal_pos"
+
+    def __init__(
+        self,
+        *args: Any,
+        config: "DictConfig",
+        **kwargs: Any,
+    ):
+        self.cache_base_dir = config.cache
+        self._current_scene_id = ""
+        self._current_episode_id = ""
+        self._current_episode_image_goal_pos = None
+        super().__init__(config=config)
+
+    def _get_uuid(self, *args: Any, **kwargs: Any) -> str:
+        return self.cls_uuid
+
+    def _get_sensor_type(self, *args: Any, **kwargs: Any):
+        return SensorTypes.SEMANTIC
+
+    def _get_observation_space(self, *args: Any, **kwargs: Any):
+        return spaces.Box(
+            low=0, high=13, shape=(196, 2), dtype=np.int32
+        )
+
+    def get_observation(
+        self,
+        observations,
+        *args: Any,
+        episode: Any,
+        **kwargs: Any,
+    ) -> Optional[int]:
+        episode_id = f"{episode.scene_id}_{episode.episode_id}"
+        if self._current_scene_id != episode.scene_id:
+            self._current_scene_id = episode.scene_id
+            scene_id = episode.scene_id.split("/")[-1].split(".")[0]
+            self.cache = load_pickle(
+                os.path.join(self.cache_base_dir, f"{scene_id}_embedding.pkl")
+            )
+
+        if self._current_episode_id != episode_id:
+            self._current_episode_id = episode_id
+            self._current_episode_image_goal_pos = self.cache[episode.goal_key][
+                episode.goal_image_id
+            ]["embedding"][1]
+
+        return self._current_episode_image_goal_pos
