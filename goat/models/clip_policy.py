@@ -38,9 +38,10 @@ class PointNavResNetCLIPPolicy(NetPolicy):
         policy_config: "DictConfig" = None,
         aux_loss_config: Optional["DictConfig"] = None,
         add_clip_linear_projection: bool = False,
+        add_language_linear_projection: bool = False,
+        add_instance_linear_projection: bool = False,
         depth_ckpt: str = "",
         late_fusion: bool = False,
-        cache_type: str = None,
         **kwargs,
     ):
         if policy_config is not None:
@@ -64,9 +65,10 @@ class PointNavResNetCLIPPolicy(NetPolicy):
                 backbone=backbone,
                 discrete_actions=discrete_actions,
                 add_clip_linear_projection=add_clip_linear_projection,
+                add_language_linear_projection=add_language_linear_projection,
+                add_instance_linear_projection=add_instance_linear_projection,
                 depth_ckpt=depth_ckpt,
                 late_fusion=late_fusion,
-                cache_type=cache_type,
             ),
             action_space=action_space,
             policy_config=policy_config,
@@ -120,9 +122,10 @@ class PointNavResNetCLIPPolicy(NetPolicy):
             policy_config=config.habitat_baselines.rl.policy,
             aux_loss_config=config.habitat_baselines.rl.auxiliary_losses,
             add_clip_linear_projection=config.habitat_baselines.rl.policy.add_clip_linear_projection,
+            add_language_linear_projection=config.habitat_baselines.rl.policy.add_language_linear_projection,
+            add_instance_linear_projection=config.habitat_baselines.rl.policy.add_instance_linear_projection,
             depth_ckpt=depth_ckpt,
             late_fusion=late_fusion,
-            cache_type=config.habitat.task.lab_sensors.cache_instance_imagegoal_sensor.cache_type
         )
 
     def freeze_visual_encoders(self):
@@ -170,7 +173,6 @@ class PointNavResNetCLIPNet(Net):
         add_language_linear_projection: bool = False,
         add_instance_linear_projection: bool = False,
         late_fusion: bool = False,
-        cache_type: str = None,
     ):
         super().__init__()
         self.prev_action_embedding: nn.Module
@@ -179,7 +181,6 @@ class PointNavResNetCLIPNet(Net):
         self.add_language_linear_projection = add_language_linear_projection
         self.add_instance_linear_projection = add_instance_linear_projection
         self.late_fusion = late_fusion
-        self.cache_type = cache_type
         self._n_prev_action = 32
         if discrete_actions:
             self.prev_action_embedding = nn.Embedding(
@@ -289,36 +290,38 @@ class PointNavResNetCLIPNet(Net):
             rnn_input_size_info["language_goal"] = language_goal_size
 
         if CacheImageGoalSensor.cls_uuid in observation_space.spaces:
-            if self.cache_type == "vc1":
-                embedding_dim = 1024
-                print(
-                    f"InstanceImage embedding: {embedding_dim}, "
-                    f"Add Instance linear: {add_instance_linear_projection}"
-                )
-                if self.add_instance_linear_projection:
-                    self.instance_embedding = nn.Linear(embedding_dim, 256)
-                    instance_goal_size = 256
-                else:
-                    instance_goal_size = embedding_dim
-            elif self.cache_type == "croco":
-                self.croco_binocular_encoder = CrocoBinocularEncoder(
-                    observation_space=observation_space,
-                    checkpoint='/srv/flash1/gchhablani3/goat/goat/models/encoders/croco/pretrained_models/CroCo_V2_ViTLarge_BaseDecoder.pth', # TODO: Remove hardcoding
-                    hidden_size=32, # NOTE: Total will be 196 * 32 = 6272 per goal
-                )
-                embedding_dim = 6272 # NOTE: Assuming the base decoder variant for now and FC is inside binocular encoder
-                print(
-                    f"Binocular encoder embedding: {embedding_dim}, "
-                    f"Add Instance linear: {add_instance_linear_projection}"
-                )
-                if self.add_instance_linear_projection:
-                    self.instance_embedding = nn.Linear(embedding_dim, 256)
-                    instance_goal_size = 256
-                else:
-                    instance_goal_size = embedding_dim
+            embedding_dim = 1024
+            print(
+                f"InstanceImage embedding: {embedding_dim}, "
+                f"Add Instance linear: {add_instance_linear_projection}"
+            )
+            if self.add_instance_linear_projection:
+                self.instance_embedding = nn.Linear(embedding_dim, 256)
+                instance_goal_size = 256
             else:
-                raise NotImplementedError
+                instance_goal_size = embedding_dim
+        
+            rnn_input_size += instance_goal_size
+            rnn_input_size_info["instance_goal"] = instance_goal_size
 
+        if (CacheCrocoGoalPosSensor.cls_uuid in observation_space.spaces 
+            and CacheCrocoGoalFeatSensor.cls_uuid in observation_space.spaces): 
+            self.croco_binocular_encoder = CrocoBinocularEncoder(
+                observation_space=observation_space,
+                checkpoint='/srv/flash1/gchhablani3/goat/goat/models/encoders/croco/pretrained_models/CroCo_V2_ViTLarge_BaseDecoder.pth', # TODO: Remove hardcoding
+                hidden_size=32, # NOTE: Total will be 196 * 32 = 6272 per goal
+            )
+            embedding_dim = 6272 # NOTE: Assuming the base decoder variant for now and FC is inside binocular encoder
+            print(
+                f"Binocular encoder embedding: {embedding_dim}, "
+                f"Add Instance linear: {add_instance_linear_projection}"
+            )
+            if self.add_instance_linear_projection:
+                self.instance_embedding = nn.Linear(embedding_dim, 256)
+                instance_goal_size = 256
+            else:
+                instance_goal_size = embedding_dim
+            
             rnn_input_size += instance_goal_size
             rnn_input_size_info["instance_goal"] = instance_goal_size
 
@@ -444,17 +447,17 @@ class PointNavResNetCLIPNet(Net):
             x.append(language_goal)
 
         if CacheImageGoalSensor.cls_uuid in observations:
-            if self.cache_type == "vc1":
-                instance_goal = observations[CacheImageGoalSensor.cls_uuid]
-                if self.add_instance_linear_projection:
-                    instance_goal = self.instance_embedding(instance_goal)
-                x.append(instance_goal)
-            elif self.cache_type == "croco":
-                croco_feats = self.croco_binocular_encoder(observations)
-                if self.add_instance_linear_projection:
-                    instance_goal = self.instance_embedding(croco_feats)
-                x.append(instance_goal)
+            instance_goal = observations[CacheImageGoalSensor.cls_uuid]
+            if self.add_instance_linear_projection:
+                instance_goal = self.instance_embedding(instance_goal)
+            x.append(instance_goal)
 
+        if (CacheCrocoGoalPosSensor.cls_uuid in observations 
+            and CacheCrocoGoalFeatSensor.cls_uuid in observations):
+            croco_feats = self.croco_binocular_encoder(observations)
+            if self.add_instance_linear_projection:
+                instance_goal = self.instance_embedding(croco_feats)
+            x.append(instance_goal)
         if (
             ClipImageGoalSensor.cls_uuid in observations
             and not self.late_fusion
