@@ -21,6 +21,7 @@ from tqdm import tqdm
 from goat.config import (
     ClipObjectGoalSensorConfig,
     GoatDistanceToGoalConfig,
+    GoatDistanceToGoalRewardConfig,
     GoatSoftSPLConfig,
     GoatSPLConfig,
     GoatSuccessConfig,
@@ -110,6 +111,11 @@ def generate_trajectories(cfg, video_dir="", num_episodes=1):
                     )
 
                 info = env.get_metrics()
+                print(
+                    "Action: {}, Reward: {}".format(
+                        best_action, info["distance_to_goal_reward"]
+                    )
+                )
                 frame = observations_to_image(
                     {"rgb": observations["rgb"]}, info
                 )
@@ -180,6 +186,9 @@ def main():
         config.habitat.task.measurements.success = GoatSuccessConfig()
         config.habitat.task.measurements.spl = GoatSPLConfig()
         config.habitat.task.measurements.soft_spl = GoatSoftSPLConfig()
+        config.habitat.task.measurements.distance_to_goal_reward = (
+            GoatDistanceToGoalRewardConfig()
+        )
         config.habitat.task.measurements.success.success_distance = 0.25
 
     generate_trajectories(
