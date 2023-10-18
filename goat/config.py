@@ -56,6 +56,11 @@ class GoatSoftSPLConfig(MeasurementConfig):
 
 
 @dataclass
+class GoatDistanceToGoalRewardConfig(MeasurementConfig):
+    type: str = "GoatDistanceToGoalReward"
+
+
+@dataclass
 class ClipImageGoalSensorConfig(LabSensorConfig):
     type: str = "ClipImageGoalSensor"
 
