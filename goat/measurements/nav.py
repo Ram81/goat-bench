@@ -487,6 +487,51 @@ class GoatSoftSPL(Measure):
 
 
 @registry.register_measure
+class GoatDistanceToGoalReward(Measure):
+    """
+    The measure calculates a reward based on the distance towards the goal.
+    The reward is `- (new_distance - previous_distance)` i.e. the
+    decrease of distance to the goal.
+    """
+
+    cls_uuid: str = "distance_to_goal_reward"
+
+    def __init__(
+        self, sim: Simulator, config: "DictConfig", *args: Any, **kwargs: Any
+    ):
+        self._sim = sim
+        self._config = config
+        self._previous_distance: Optional[float] = None
+        super().__init__()
+
+    def _get_uuid(self, *args: Any, **kwargs: Any) -> str:
+        return self.cls_uuid
+
+    def reset_metric(self, episode, task, *args: Any, **kwargs: Any):
+        task.measurements.check_measure_dependencies(
+            self.uuid, [GoatDistanceToGoal.cls_uuid]
+        )
+        self._previous_distance = task.measurements.measures[
+            GoatDistanceToGoal.cls_uuid
+        ].get_metric()["distance_to_target"]
+        self.update_metric(episode=episode, task=task, *args, **kwargs)  # type: ignore
+
+    def update_metric(
+        self, episode, task: NavigationTask, *args: Any, **kwargs: Any
+    ):
+        distance_to_target = task.measurements.measures[
+            GoatDistanceToGoal.cls_uuid
+        ].get_metric()["distance_to_target"]
+
+        # Handle case when subtask stop is called
+        if task._subtask_stop_called():
+            self._previous_distance = distance_to_target
+
+        self._metric = -(distance_to_target - self._previous_distance)
+        self._previous_distance = distance_to_target
+
+
+@registry.register_measure
 class GoatTopDownMap(TopDownMap):
     r"""Top Down Map measure for GOAT task."""
 
