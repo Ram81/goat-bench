@@ -6,7 +6,7 @@ from habitat.sims.habitat_simulator.actions import (
 )
 
 
-@registry.register_action_space_configuration(name="v2")
+@registry.register_action_space_configuration(name="v2-goat")
 class HabitatSimV2ActionSpaceConfiguration(
     HabitatSimV1ActionSpaceConfiguration
 ):

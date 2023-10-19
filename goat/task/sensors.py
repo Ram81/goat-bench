@@ -5,10 +5,13 @@ from typing import TYPE_CHECKING, Any, Optional
 
 import numpy as np
 from gym import spaces
+from habitat.core.embodied_task import EmbodiedTask
 from habitat.core.registry import registry
 from habitat.core.simulator import RGBSensor, Sensor, SensorTypes, Simulator
 from habitat.core.utils import try_cv2_import
 from habitat.tasks.nav.nav import NavigationEpisode
+
+from goat.task.goat_task import GoatEpisode
 
 cv2 = try_cv2_import()
 
@@ -61,15 +64,33 @@ class ClipObjectGoalSensor(Sensor):
         observations,
         *args: Any,
         episode: Any,
+        task: EmbodiedTask,
         **kwargs: Any,
     ) -> Optional[int]:
-        category = (
-            episode.object_category
-            if hasattr(episode, "object_category")
-            else ""
-        )
+        dummy_embedding = np.zeros((1024,), dtype=np.float32)
+        if isinstance(episode, GoatEpisode):
+            # print(
+            #     "GoatEpisode: {} - {}".format(
+            #         episode.tasks[task.active_subtask_idx],
+            #         isinstance(episode, GoatEpisode),
+            #     )
+            # )
+            if task.active_subtask_idx < len(episode.tasks):
+                if episode.tasks[task.active_subtask_idx][1] == "object":
+                    category = episode.tasks[task.active_subtask_idx][0]
+                else:
+                    return dummy_embedding
+            else:
+                return dummy_embedding
+        else:
+            category = (
+                episode.object_category
+                if hasattr(episode, "object_category")
+                else ""
+            )
         if category not in self.cache:
-            print("Missing category: {}".format(category))
+            print("ObjectGoal Missing category: {}".format(category))
+        # print("ObjectGoal Found category: {}".format(category))
         return self.cache[category]
 
 
@@ -353,21 +374,61 @@ class LanguageGoalSensor(Sensor):
         observations,
         *args: Any,
         episode: Any,
+        task: EmbodiedTask,
         **kwargs: Any,
     ) -> Optional[int]:
-        uuid = episode.instructions[0].lower()
-        first_3_words = [
-            "prefix: instruction: go",
-            "instruction: find the",
-            "instruction: go to",
-            "api_failure",
-            "instruction: locate the",
-        ]
-        for prefix in first_3_words:
-            uuid = uuid.replace(prefix, "")
-            uuid = uuid.replace("\n", " ").strip()
-        if uuid not in self.cache:
-            print("Missing category: {}".format(uuid))
+        # print(
+        #     "Episode: {} - {}".format(
+        #         dir(episode), isinstance(episode, GoatEpisode)
+        #     )
+        # )
+        uuid = ""
+        dummy_embedding = np.zeros((768,), dtype=np.float32)
+        if isinstance(episode, GoatEpisode):
+            # print(
+            #     "Lang GoatEpisode: {} - {}".format(
+            #         episode.tasks[task.active_subtask_idx],
+            #         isinstance(episode, GoatEpisode),
+            #     )
+            # )
+            if task.active_subtask_idx < len(episode.tasks):
+                if episode.tasks[task.active_subtask_idx][1] == "description":
+                    # print("not retur lang")
+                    instance_id = episode.tasks[task.active_subtask_idx][2]
+                    # print("instance id", instance_id)
+                    # print(
+                    #     "episode goals",
+                    #     [
+                    #         list(g.keys())
+                    #         for g in episode.goals[task.active_subtask_idx]
+                    #     ],
+                    # )
+                    goal = [
+                        g
+                        for g in episode.goals[task.active_subtask_idx]
+                        if g["object_id"] == instance_id
+                    ]
+                    uuid = goal[0]["lang_desc"].lower()
+                else:
+                    return dummy_embedding
+            else:
+                return dummy_embedding
+        else:
+            uuid = episode.instructions[0].lower()
+            first_3_words = [
+                "prefix: instruction: go",
+                "instruction: find the",
+                "instruction: go to",
+                "api_failure",
+                "instruction: locate the",
+            ]
+            for prefix in first_3_words:
+                uuid = uuid.replace(prefix, "")
+                uuid = uuid.replace("\n", " ")
+            uuid = uuid.strip()
+
+        if self.cache.get(uuid) is None:
+            print("Lang Missing category: {}".format(uuid))
         return self.cache[uuid]
 
 
@@ -395,7 +456,7 @@ class CacheImageGoalSensor(Sensor):
         self.cache = None
         self._current_scene_id = ""
         self._current_episode_id = ""
-        self._current_episode_image_goal = None
+        self._current_episode_image_goal = np.zeros((1024,), dtype=np.float32)
         super().__init__(config=config)
 
     def _get_uuid(self, *args: Any, **kwargs: Any) -> str:
@@ -414,23 +475,111 @@ class CacheImageGoalSensor(Sensor):
         observations,
         *args: Any,
         episode: Any,
+        task: EmbodiedTask,
         **kwargs: Any,
     ) -> Optional[int]:
         episode_id = f"{episode.scene_id}_{episode.episode_id}"
+
         if self._current_scene_id != episode.scene_id:
             self._current_scene_id = episode.scene_id
             scene_id = episode.scene_id.split("/")[-1].split(".")[0]
+
             self.cache = load_pickle(
-                os.path.join(self.cache_base_dir, f"{scene_id}_embedding.pkl")
+                os.path.join(
+                    self.cache_base_dir, f"{scene_id}_goat_embedding.pkl"
+                )
             )
 
         if self._current_episode_id != episode_id:
             self._current_episode_id = episode_id
-            self._current_episode_image_goal = self.cache[episode.goal_key][
-                episode.goal_image_id
-            ]["embedding"]
+
+            dummy_embedding = np.zeros((1024,), dtype=np.float32)
+            if isinstance(episode, GoatEpisode):
+                # print(
+                #     "IIN GoatEpisode: {} - {}".format(
+                #         episode.tasks[task.active_subtask_idx],
+                #         isinstance(episode, GoatEpisode),
+                #     )
+                # )
+                if task.active_subtask_idx < len(episode.tasks):
+                    if episode.tasks[task.active_subtask_idx][1] == "image":
+                        instance_id = episode.tasks[task.active_subtask_idx][2]
+                        curent_task = episode.tasks[task.active_subtask_idx]
+                        scene_id = episode.scene_id.split("/")[-1].split(".")[0]
+
+                        uuid = "{}_{}".format(scene_id, instance_id)
+                        # print(
+                        #     instance_id,
+                        #     curent_task,
+                        #     scene_id,
+                        #     self.cache.get(uuid) is None,
+                        # )
+
+                        self._current_episode_image_goal = self.cache[
+                            "{}_{}".format(scene_id, instance_id)
+                        ][curent_task[-1]]["embedding"]
+                    else:
+                        self._current_episode_image_goal = dummy_embedding
+                else:
+                    self._current_episode_image_goal = dummy_embedding
+            else:
+                self._current_episode_image_goal = self.cache[episode.goal_key][
+                    episode.goal_image_id
+                ]["embedding"]
 
         return self._current_episode_image_goal
+
+
+@registry.register_sensor
+class GoatCurrentSubtaskSensor(Sensor):
+    r"""A sensor for Image goal specification as observations which is used in IIN.
+    Args:
+        sim: a reference to the simulator for calculating task observations.
+        config: a config for the ObjectGoalPromptSensor sensor. Can contain field
+            GOAL_SPEC that specifies which id use for goal specification,
+            GOAL_SPEC_MAX_VAL the maximum object_id possible used for
+            observation space definition.
+        dataset: a Object Goal navigation dataset that contains dictionaries
+        of categories id to text mapping.
+    """
+    cls_uuid: str = "current_subtask"
+
+    def __init__(
+        self,
+        *args: Any,
+        config: "DictConfig",
+        **kwargs: Any,
+    ):
+        self.sub_task_type = config.sub_task_type
+        super().__init__(config=config)
+
+    def _get_uuid(self, *args: Any, **kwargs: Any) -> str:
+        return self.cls_uuid
+
+    def _get_sensor_type(self, *args: Any, **kwargs: Any):
+        return SensorTypes.SEMANTIC
+
+    def _get_observation_space(self, *args: Any, **kwargs: Any):
+        return spaces.Box(
+            low=0, high=len(self.sub_task_type) + 1, shape=(1,), dtype=np.int32
+        )
+
+    def get_observation(
+        self,
+        observations,
+        *args: Any,
+        episode: Any,
+        task: EmbodiedTask,
+        **kwargs: Any,
+    ) -> Optional[int]:
+        current_subtask = task.active_subtask_idx
+        current_subtask_id = len(self.sub_task_type)
+        if current_subtask < len(episode.tasks):
+            current_subtask_id = self.sub_task_type.index(
+                episode.tasks[current_subtask][1]
+            )
+
+        return current_subtask_id
 
 
 @registry.register_sensor

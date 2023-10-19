@@ -50,6 +50,7 @@ class CacheGoals:
 
     def run(self, scene):
         data = {}
+        data_goal = {}
         env = self.config_env(scene)
         env.reset()
         goals = env._dataset.goals
@@ -58,12 +59,8 @@ class CacheGoals:
         os.makedirs(self.output_path, exist_ok=True)
 
         for goal_k, goal_val in goals.items():
-            print("Goal: {} - {}".format(goal_k, len(goal_val.image_goals)))
             goals_meta = []
             for goal_idx, img_goal in enumerate(goal_val.image_goals):
-                # Embedding directory and files
-                vc1_file = f"vc1_embedding_{goal_idx}.npy"
-
                 img = env.task.sensor_suite.sensors[
                     "instance_imagegoal"
                 ]._get_instance_image_goal(img_goal)
@@ -79,10 +76,15 @@ class CacheGoals:
                 )
                 goals_meta.append(metadata)
 
+            scene_id = goal_k.split("_")[0]
             data[f"{goal_k}"] = goals_meta
+            data_goal[f"{scene_id}_{goal_val.object_name}"] = goals_meta
 
         out_path = os.path.join(self.output_path, f"{scene}_embedding.pkl")
         save_pickle(data, out_path)
+
+        out_path = os.path.join(self.output_path, f"{scene}_goat_embedding.pkl")
+        save_pickle(data_goal, out_path)
 
 
 if __name__ == "__main__":
