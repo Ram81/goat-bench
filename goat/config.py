@@ -1,4 +1,5 @@
-from dataclasses import dataclass
+from dataclasses import dataclass, field
+from typing import List
 
 from habitat.config.default_structured_configs import (
     ActionConfig,
@@ -25,6 +26,14 @@ class ClipObjectGoalSensorConfig(LabSensorConfig):
     type: str = "ClipObjectGoalSensor"
     prompt: str = "Find and go to {category}"
     cache: str = "data/clip_embeddings/ovon_hm3d_cache.pkl"
+
+
+@dataclass
+class GoatGoalSensorConfig(LabSensorConfig):
+    type: str = "GoatGoalSensor"
+    object_cache: str = ""
+    langauge_cache: str = ""
+    image_cache: str = ""
 
 
 @dataclass
@@ -69,6 +78,14 @@ class ClipImageGoalSensorConfig(LabSensorConfig):
 class CacheImageGoalSensorConfig(LabSensorConfig):
     type: str = "CacheImageGoalSensor"
     cache: str = "data/"
+
+
+@dataclass
+class GoatCurrentSubtaskSensorConfig(LabSensorConfig):
+    type: str = "GoatCurrentSubtaskSensor"
+    sub_task_type: List[str] = field(
+        default_factory=lambda: ["object", "description", "image"]
+    )
 
 
 @dataclass
@@ -178,6 +195,8 @@ class OVONRLConfig(RLConfig):
 @dataclass
 class OVONBaselinesRLConfig(HabitatBaselinesRLConfig):
     rl: OVONRLConfig = OVONRLConfig()
+    should_load_agent_state: bool = True
+    debug: bool = False
 
 
 @dataclass
@@ -215,6 +234,13 @@ cs.store(
 )
 
 cs.store(
+    package=f"habitat.task.lab_sensors.goat_goal_sensor",
+    group="habitat/task/lab_sensors",
+    name="goat_goal_sensor",
+    node=GoatGoalSensorConfig,
+)
+
+cs.store(
     package=f"habitat.task.lab_sensors.clip_imagegoal_sensor",
     group="habitat/task/lab_sensors",
     name="clip_imagegoal_sensor",
@@ -240,6 +266,13 @@ cs.store(
     group="habitat/task/lab_sensors",
     name="image_goal_rotation_sensor",
     node=ImageGoalRotationSensorConfig,
+)
+
+cs.store(
+    package=f"habitat.task.lab_sensors.current_subtask_sensor",
+    group="habitat/task/lab_sensors",
+    name="current_subtask_sensor",
+    node=GoatCurrentSubtaskSensorConfig,
 )
 
 cs.store(

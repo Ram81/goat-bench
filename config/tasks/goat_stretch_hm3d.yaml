@@ -7,6 +7,7 @@ defaults:
   - _self_
 
 habitat:
+  env_task: GymGoatEnv
   environment:
     max_episode_steps: 500
 
@@ -15,11 +16,13 @@ habitat:
     actions:
       subtask_stop:
         type: SubtaskStopAction
+    success_measure: success
+    reward_measure: distance_to_goal_reward
 
   simulator:
     turn_angle: 30
     tilt_angle: 30
-    action_space_config: "v2"
+    action_space_config: "v2-goat"
     agents:
       main_agent:
         sim_sensors:

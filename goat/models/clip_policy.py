@@ -12,19 +12,24 @@ from habitat_baselines.common.baseline_registry import baseline_registry
 from habitat_baselines.rl.ddppo.policy import PointNavResNetNet
 from habitat_baselines.rl.ddppo.policy.resnet import resnet18
 from habitat_baselines.rl.ddppo.policy.resnet_policy import ResNetEncoder
-from habitat_baselines.rl.models.rnn_state_encoder import \
-    build_rnn_state_encoder
+from habitat_baselines.rl.models.rnn_state_encoder import (
+    build_rnn_state_encoder,
+)
 from habitat_baselines.rl.ppo import Net, NetPolicy
 from habitat_baselines.utils.common import get_num_actions
 from torch import nn as nn
 from torchvision import transforms as T
 
-from goat.task.sensors import (CacheImageGoalSensor, ClipGoalSelectorSensor,
-                               ClipImageGoalSensor, ClipObjectGoalSensor,
-                               LanguageGoalSensor)
+from goat.task.sensors import (
+    CacheImageGoalSensor,
+    ClipGoalSelectorSensor,
+    ClipImageGoalSensor,
+    ClipObjectGoalSensor,
+    LanguageGoalSensor,
+)
 
 
-@baseline_registry.register_policy
+@baseline_registry.register_policy(name="PointNavResnetCLIPPolicy")
 class PointNavResNetCLIPPolicy(NetPolicy):
     def __init__(
         self,
@@ -206,6 +211,7 @@ class PointNavResNetCLIPNet(Net):
         for k, v in observation_space.spaces.items():
             print(f"  {k}: {v}")
 
+        print("Near objectgoal policy: {}".format(ObjectGoalSensor.cls_uuid))
         if ObjectGoalSensor.cls_uuid in observation_space.spaces:
             self._n_object_categories = (
                 int(observation_space.spaces[ObjectGoalSensor.cls_uuid].high[0])
@@ -217,6 +223,11 @@ class PointNavResNetCLIPNet(Net):
             rnn_input_size += 32
             rnn_input_size_info["object_goal"] = 32
 
+        print(
+            "Near CLIP obj/img policy: {} -  {}".format(
+                ClipObjectGoalSensor.cls_uuid, ClipImageGoalSensor.cls_uuid
+            )
+        )
         if (
             ClipObjectGoalSensor.cls_uuid in observation_space.spaces
             or ClipImageGoalSensor.cls_uuid in observation_space.spaces
@@ -236,6 +247,12 @@ class PointNavResNetCLIPNet(Net):
                 rnn_input_size += object_goal_size
                 rnn_input_size_info["clip_goal"] = object_goal_size
 
+        print(
+            "In CLIP policy: {} - {}".format(
+                LanguageGoalSensor.cls_uuid,
+                LanguageGoalSensor.cls_uuid in observation_space.spaces,
+            )
+        )
         if LanguageGoalSensor.cls_uuid in observation_space.spaces:
             embedding_dim = 768
             print(

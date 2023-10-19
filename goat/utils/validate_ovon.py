@@ -2,7 +2,12 @@ import argparse
 import glob
 import os
 
-from goat.utils.utils import count_episodes, load_dataset, load_json, write_json
+from goat.utils.utils import (
+    count_episodes,
+    load_dataset,
+    load_pickle,
+    write_json,
+)
 
 
 def save_instances(path, output_path):
@@ -154,6 +159,54 @@ def validate_ovon(path):
     )
 
 
+def validate_goat(path, embeddings_path):
+    embeddings = load_pickle(embeddings_path)
+    dataset = load_dataset(path)
+
+    sceme_id = os.path.basename(path).split(".")[0]
+    missing = []
+    for g_key, goals in dataset["goals"].items():
+        for goal in goals:
+            if goal.get("image_goals") is None:
+                continue
+            if embeddings.get(f"{sceme_id}_{goal['object_id']}") is None:
+                missing.append(goal["object_id"])
+    print(missing)
+
+
+def validate_lnav_embeddings(path, embeddings_path):
+    embeddings = load_pickle(embeddings_path)
+
+    files = glob.glob(os.path.join(path, "*.json.gz"))
+    episodes = []
+    for file in files:
+        dataset = load_dataset(file)
+        episodes.extend(dataset["episodes"])
+
+    # sceme_id = os.path.basename(path).split(".")[0]
+    missing = []
+    count = 0
+    for epsiode in episodes:
+        uuid = epsiode["instructions"][0].lower()
+        first_3_words = [
+            "prefix: instruction: go",
+            "instruction: find the",
+            "instruction: go to",
+            "api_failure",
+            "instruction: locate the",
+        ]
+        for prefix in first_3_words:
+            uuid = uuid.replace(prefix, "")
+            uuid = uuid.replace("\n", " ")
+        uuid = uuid.strip()
+        if embeddings.get(uuid) is None:
+            missing.append(uuid)
+        if len(uuid) == 0:
+            count += 1
+
+    print(missing, count)
+
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument(
@@ -165,7 +218,6 @@ if __name__ == "__main__":
     parser.add_argument(
         "--output-path",
         type=str,
-        required=True,
         default="",
         help="Path to the dataset",
     )
@@ -174,10 +226,29 @@ if __name__ == "__main__":
         action="store_true",
         dest="save_instances",
     )
+    parser.add_argument(
+        "--embeddings",
+        type=str,
+        default="",
+    )
+    parser.add_argument(
+        "--validate-goat",
+        action="store_true",
+        dest="validate_goat",
+    )
+    parser.add_argument(
+        "--validate-lnav",
+        action="store_true",
+        dest="validate_lnav",
+    )
 
     args = parser.parse_args()
 
-    if args.save_instances:
+    if args.validate_goat:
+        validate_goat(args.path, args.embeddings)
+    elif args.validate_lnav:
+        validate_lnav_embeddings(args.path, args.embeddings)
+    elif args.save_instances:
         save_ovon_instances(args.path, args.output_path)
     elif "languagenav" in args.path:
         validate_lnav(args.path)

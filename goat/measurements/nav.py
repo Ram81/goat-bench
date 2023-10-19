@@ -242,10 +242,12 @@ class GoatSuccess(Measure):
         self._current_subtask_idx = 0
         self._success_by_subtasks = defaultdict(int)
         self._subtask_counts = defaultdict(int)
+
         self._subtask_success = [0.0] * len(episode.tasks)
 
         for t in episode.tasks:
             self._subtask_counts[t[1]] += 1
+            self._success_by_subtasks["{}_success".format(t[1])] = 0
 
         self.update_metric(episode=episode, task=task, *args, **kwargs)
 
@@ -288,10 +290,12 @@ class GoatSuccess(Measure):
                 self._success_by_subtasks[k] / self._subtask_counts[k]
             )
 
+        num_subtask_success = sum(self._subtask_success) == len(episode.tasks)
         self._metric = {
-            "composite_success": sum(self._success_by_subtasks.values())
+            "composite_success": num_subtask_success,
+            "partial_success": sum(self._success_by_subtasks.values())
             / sum(self._subtask_counts.values()),
-            **success_by_subtask,
+            # **success_by_subtask,
             "subtask_success": self._subtask_success,
         }
 
@@ -337,6 +341,7 @@ class GoatSPL(Measure):
 
         for t in episode.tasks:
             self._subtask_counts[t[1]] += 1
+            self._spl_by_subtasks["{}_spl".format(t[1])] = 0
 
         self.update_metric(  # type:ignore
             episode=episode, task=task, *args, **kwargs
@@ -380,7 +385,7 @@ class GoatSPL(Measure):
         self._metric = {
             "composite_spl": sum(self._spl_by_subtasks.values())
             / sum(self._subtask_counts.values()),
-            **spl_by_subtask,
+            # **spl_by_subtask,
         }
 
         if self._current_subtask_idx != task.active_subtask_idx:
@@ -429,6 +434,7 @@ class GoatSoftSPL(Measure):
 
         for t in episode.tasks:
             self._subtask_counts[t[1]] += 1
+            self._softspl_by_subtasks["{}_softspl".format(t[1])] = 0
 
         self.update_metric(  # type:ignore
             episode=episode, task=task, *args, **kwargs
@@ -475,7 +481,7 @@ class GoatSoftSPL(Measure):
         self._metric = {
             "composite_softspl": sum(self._softspl_by_subtasks.values())
             / sum(self._subtask_counts.values()),
-            **softspl_by_subtask,
+            # **softspl_by_subtask,
         }
 
         if self._current_subtask_idx != task.active_subtask_idx:
