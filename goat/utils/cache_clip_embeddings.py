@@ -158,6 +158,39 @@ def cache_language_goals(dataset_path, output_path, model):
         )
     print("Max instruction length: {}".format(max_instruction_len))
     print("First 3 words: {}".format(first_3_words))
+    os.makedirs(os.path.dirname(output_path), exist_ok=True)
+
+    cache_embeddings(list(instructions), output_path, model)
+
+
+def cache_goat_goals(dataset_path, output_path, model):
+    files = glob.glob(os.path.join(dataset_path, "*json.gz"))
+    instructions = set()
+    first_3_words = set()
+    for file in tqdm(files):
+        dataset = load_dataset(file)
+        for goal_key, goals in dataset["goals"].items():
+            for goal in goals:
+                if goal.get("lang_desc") is None:
+                    continue
+                cleaned_instruction = goal["lang_desc"].lower()
+                # cleaned_instruction = clean_instruction(
+                #     episode["instructions"][0].lower()
+                # )
+                instructions.add(cleaned_instruction)
+                first_3_words.add(
+                    " ".join(cleaned_instruction.lower().split(" ")[:3])
+                )
+
+    print("Total goat instructions: {}".format(len(instructions)))
+    max_instruction_len = 0
+    for instruction in instructions:
+        max_instruction_len = max(
+            max_instruction_len, len(instruction.split(" "))
+        )
+    print("Max instruction length: {}".format(max_instruction_len))
+    print("First 3 words: {}".format(first_3_words))
+    os.makedirs(os.path.dirname(output_path), exist_ok=True)
 
     cache_embeddings(list(instructions), output_path, model)
 
@@ -167,6 +200,8 @@ def main(dataset_path, output_path, dataset, model):
         cache_ovon_goals(dataset_path, output_path)
     elif dataset == "lnav":
         cache_language_goals(dataset_path, output_path, model)
+    elif dataset == "goat":
+        cache_goat_goals(dataset_path, output_path, model)
     else:
         raise NotImplementedError
 
