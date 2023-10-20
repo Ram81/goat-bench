@@ -197,6 +197,8 @@ class OVONPolicyConfig(PolicyConfig):
     add_clip_linear_projection: bool = False
     add_language_linear_projection: bool = False
     add_instance_linear_projection: bool = False
+    croco_adapter: bool = False
+    use_croco: bool = False
     depth_ckpt: str = ""
     late_fusion: bool = False
 

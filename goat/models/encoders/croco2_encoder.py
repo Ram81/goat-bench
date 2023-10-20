@@ -7,7 +7,7 @@ from torchvision.transforms import Normalize, Compose, Resize, InterpolationMode
 
 class Croco2Encoder(Encoder):
     def __init__(
-        self, ckpt_path: str = 'goat/models/encoders/croco/pretrained_models/CroCo_V2_ViTLarge_BaseDecoder.pth', device: str = "cuda"
+        self, ckpt_path: str = 'goat/models/encoders/croco/pretrained_models/CroCo_V2_ViTBase_SmallDecoder.pth', device: str = "cuda"
     ):
         super().__init__()
         imagenet_mean = [0.485, 0.456, 0.406]
