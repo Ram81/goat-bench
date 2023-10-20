@@ -32,7 +32,8 @@ class Croco2ViTDecoder(nn.Module):
     def __init__(self, img_size=224, patch_size=16, mask_ratio=0.9, enc_embed_dim=768,
                  enc_depth=12, enc_num_heads=12, dec_embed_dim=512, dec_depth=8,
                  dec_num_heads=16, mlp_ratio=4, norm_layer=partial(nn.LayerNorm, eps=1e-6),
-                 norm_im2_in_dec=True, pos_embed='cosine'):
+                 norm_im2_in_dec=True, pos_embed='cosine',
+                 adapter=False, adapter_bottleneck=64, adapter_scalar='0.1', adapter_style='parallel'):
         
         super(Croco2ViTDecoder, self).__init__()
 
@@ -56,32 +57,42 @@ class Croco2ViTDecoder(nn.Module):
             raise NotImplementedError('Unknown pos_embed ' + pos_embed)
 
         # Decoder
-        self._set_decoder(enc_embed_dim, dec_embed_dim, dec_num_heads, dec_depth, mlp_ratio, norm_layer, norm_im2_in_dec)
+        self._set_decoder(enc_embed_dim, dec_embed_dim, dec_num_heads, dec_depth, mlp_ratio, norm_layer, norm_im2_in_dec, adapter, adapter_bottleneck, adapter_scalar, adapter_style)
 
         # Initialize weights
         self.initialize_weights()
 
-    def _set_decoder(self, enc_embed_dim, dec_embed_dim, dec_num_heads, dec_depth, mlp_ratio, norm_layer, norm_im2_in_dec):
+    def _set_decoder(self, enc_embed_dim, dec_embed_dim, dec_num_heads, dec_depth, mlp_ratio, norm_layer, norm_im2_in_dec, adapter, adapter_bottleneck, adapter_scalar, adapter_style):
         self.dec_depth = dec_depth
         self.dec_embed_dim = dec_embed_dim
         # Transfer from encoder to decoder
         self.decoder_embed = nn.Linear(enc_embed_dim, dec_embed_dim, bias=True)
         # Transformer for the decoder
         self.dec_blocks = nn.ModuleList([
-            DecoderBlock(dec_embed_dim, dec_num_heads, mlp_ratio=mlp_ratio, qkv_bias=True, norm_layer=norm_layer, norm_mem=norm_im2_in_dec, rope=self.rope)
+            DecoderBlock(dec_embed_dim, dec_num_heads, mlp_ratio=mlp_ratio, qkv_bias=True, norm_layer=norm_layer, norm_mem=norm_im2_in_dec, rope=self.rope,
+                         adapter=adapter, adapter_bottleneck=adapter_bottleneck, adapter_scalar=adapter_scalar, adapter_style=adapter_style)
             for i in range(dec_depth)])
         # Final norm layer
         self.dec_norm = norm_layer(dec_embed_dim)
 
     def initialize_weights(self):
-        # Patch embed
+        # patch embed 
         self.patch_embed._init_weights()
-        # Linears and layer norms
-        self.apply(self._init_weights)
+        # linears and layer norms
+        # self.apply(self._init_weights)
+        self.recursive_apply(self)
+        
+    def recursive_apply(self, m):
+        for name, m2 in m.named_children():
+            if "adaptmlp" in name:
+                return
+            else:
+                self.recursive_apply(m2)
+        self._init_weights(m)
 
     def _init_weights(self, m):
         if isinstance(m, nn.Linear):
-            # We use xavier_uniform following official JAX ViT
+            # we use xavier_uniform following official JAX ViT:
             torch.nn.init.xavier_uniform_(m.weight)
             if isinstance(m, nn.Linear) and m.bias is not None:
                 nn.init.constant_(m.bias, 0)
@@ -106,8 +117,6 @@ class Croco2ViTDecoder(nn.Module):
         # Encoder to decoder layer
         visf1 = self.decoder_embed(feat1)
         f2 = self.decoder_embed(feat2)
-        # Append masked tokens to the sequence
-        B, Nenc, C = visf1.size()
         f1_ = visf1
         # Add positional embedding
         if self.dec_pos_embed is not None:
