@@ -15,6 +15,7 @@ class CrocoBinocularEncoder(nn.Module):
         self,
         observation_space: spaces.Dict,
         checkpoint: str,
+        adapter: bool,
         hidden_size: int,
     ):
         super().__init__()
@@ -30,26 +31,29 @@ class CrocoBinocularEncoder(nn.Module):
             T.ConvertImageDtype(torch.float),
             T.Normalize(mean=imagenet_mean, std=imagenet_std)
         ])
-        ckpt = torch.load(checkpoint, 'cpu')
-        self.encoder = Croco2ViTEncoder(**ckpt.get('croco_kwargs', {}))
-        self.decoder = Croco2ViTDecoder(**ckpt.get('croco_kwargs', {}))
+        # device = "cuda" if torch.cuda.is_available() else "cpu"
+        ckpt = torch.load(checkpoint)
+        self.encoder = Croco2ViTEncoder(adapter=adapter, **ckpt.get('croco_kwargs', {}))
+        self.decoder = Croco2ViTDecoder(adapter=adapter, **ckpt.get('croco_kwargs', {}))
         encoder_weights = {k:v for k,v in ckpt['model'].items() if k.startswith('enc') or k.startswith('patch')}
-        msg = self.encoder.load_state_dict(encoder_weights)
+        msg = self.encoder.load_state_dict(encoder_weights, strict=False)
         print(f"Loading Croco encoder weights from {checkpoint}: {msg}")
         decoder_weights = {k:v for k,v in ckpt['model'].items() if k.startswith('dec') or k.startswith('patch')}
-        msg = self.decoder.load_state_dict(decoder_weights)
+        msg = self.decoder.load_state_dict(decoder_weights, strict=False)
         print(f"Loading Croco decoder weights from {checkpoint}: {msg}")
 
         print("Freezing Croco encoder parameters")
-        for param in self.encoder.parameters():
-            param.requires_grad = False
+        for name, param in self.encoder.named_parameters():
+            if "adaptmlp" not in name:
+                param.requires_grad = False
         self.encoder.eval()
         print("Freezing Croco decoder parameters")
-        for param in self.decoder.parameters():
-            param.requires_grad = False
+        for name, param in self.decoder.named_parameters():
+            if "adaptmlp" not in name:
+                param.requires_grad = False
         self.decoder.eval()
 
-        dec_embed_dim = ckpt['croco_kwargs']['dec_embed_dim']
+        dec_embed_dim = self.decoder.dec_embed_dim
         # TODO: Check if we should add linear here
         # OR if linear and flatten is okay at the goal_fc level
         # Original uses a single linear and flatten before passing to policy
@@ -72,11 +76,11 @@ class CrocoBinocularEncoder(nn.Module):
         if self.goal_image:
             instance_imagegoal = observations["instance_imagegoal"]
             instance_imagegoal = instance_imagegoal.permute(0, 3, 1, 2)
-            instance_imagegoal = self.visual_transform(instance_imagegoal)
+            instance_imagegoal = self.preprocess(instance_imagegoal)
             goal_feat, goal_pos = self.encoder(instance_imagegoal)
 
         elif self.goal_features:
-            goal_feat, goal_pos = observations["cache_croco_goal_feat"], observations["cache_croco_goal_pos"]
+            goal_feat, goal_pos = observations["cache_croco_goal_feat"], observations["cache_croco_goal_pos"].long()
 
         else:
             raise NotImplementedError("Required observations not found.")

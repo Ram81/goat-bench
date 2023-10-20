@@ -775,7 +775,7 @@ class CacheCrocoGoalFeatSensor(Sensor):
 
     def _get_observation_space(self, *args: Any, **kwargs: Any):
         return spaces.Box(
-            low=-np.inf, high=np.inf, shape=(196, 1024), dtype=np.float32
+            low=-np.inf, high=np.inf, shape=(196, 768), dtype=np.float32
         )
 
     def get_observation(
@@ -835,7 +835,7 @@ class CacheCrocoGoalPosSensor(Sensor):
 
     def _get_observation_space(self, *args: Any, **kwargs: Any):
         return spaces.Box(
-            low=0, high=13, shape=(196, 2), dtype=np.int32
+            low=0, high=13, shape=(196, 2), dtype=np.uint8
         )
 
     def get_observation(

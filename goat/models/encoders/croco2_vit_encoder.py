@@ -32,7 +32,8 @@ class Croco2ViTEncoder(nn.Module):
     def __init__(self, img_size=224, patch_size=16, mask_ratio=0.9, enc_embed_dim=768,
                  enc_depth=12, enc_num_heads=12, dec_embed_dim=512, dec_depth=8,
                  dec_num_heads=16, mlp_ratio=4, norm_layer=partial(nn.LayerNorm, eps=1e-6),
-                 norm_im2_in_dec=True, pos_embed='cosine'):
+                 norm_im2_in_dec=True, pos_embed='cosine',
+                 adapter=False, adapter_bottleneck=64, adapter_scalar='0.1', adapter_style='parallel'):
         super(Croco2ViTEncoder, self).__init__()
 
         # Patch embeddings (with initialization done as in MAE)
@@ -57,7 +58,8 @@ class Croco2ViTEncoder(nn.Module):
         self.enc_depth = enc_depth
         self.enc_embed_dim = enc_embed_dim
         self.enc_blocks = nn.ModuleList([
-            Block(enc_embed_dim, enc_num_heads, mlp_ratio, qkv_bias=True, norm_layer=norm_layer, rope=self.rope)
+            Block(enc_embed_dim, enc_num_heads, mlp_ratio, qkv_bias=True, norm_layer=norm_layer, rope=self.rope,
+                  adapter=adapter, adapter_bottleneck=adapter_bottleneck, adapter_scalar=adapter_scalar, adapter_style=adapter_style)
             for i in range(enc_depth)])
         self.enc_norm = norm_layer(enc_embed_dim)
 
@@ -65,14 +67,23 @@ class Croco2ViTEncoder(nn.Module):
         self.initialize_weights()
 
     def initialize_weights(self):
-        # Patch embed
+        # patch embed 
         self.patch_embed._init_weights()
-        # Linears and layer norms
-        self.apply(self._init_weights)
+        # linears and layer norms
+        # self.apply(self._init_weights)
+        self.recursive_apply(self)
+        
+    def recursive_apply(self, m):
+        for name, m2 in m.named_children():
+            if "adaptmlp" in name:
+                return
+            else:
+                self.recursive_apply(m2)
+        self._init_weights(m)
 
     def _init_weights(self, m):
         if isinstance(m, nn.Linear):
-            # We use xavier_uniform following official JAX ViT
+            # we use xavier_uniform following official JAX ViT:
             torch.nn.init.xavier_uniform_(m.weight)
             if isinstance(m, nn.Linear) and m.bias is not None:
                 nn.init.constant_(m.bias, 0)
@@ -97,7 +108,6 @@ class Croco2ViTEncoder(nn.Module):
         # Add positional embedding without cls token
         if self.enc_pos_embed is not None:
             x = x + self.enc_pos_embed[None, ...]
-        B, N, C = x.size()
         posvis = pos
         # Apply the transformer encoder and normalization
         if return_all_blocks:
