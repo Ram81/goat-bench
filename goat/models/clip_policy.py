@@ -23,7 +23,7 @@ from goat.task.sensors import (CacheImageGoalSensor, ClipGoalSelectorSensor,
                                ClipImageGoalSensor, ClipObjectGoalSensor,
                                GoatGoalSensor, LanguageGoalSensor)
 
-from habitat.tasks.nav.instance_image_nav_task import InstanceImageGoalSensor
+from habitat.tasks.nav.instance_image_nav_task import InstanceImageGoalSensor, InstanceImageGoalHFOVSensor
 from goat.models.encoders.croco_binocular_encoder import CrocoBinocularEncoder
 
 @baseline_registry.register_policy(name="PointNavResnetCLIPPolicy")
@@ -43,6 +43,7 @@ class PointNavResNetCLIPPolicy(NetPolicy):
         add_instance_linear_projection: bool = False,
         croco_adapter: bool = False,
         use_croco: bool = False,
+        use_hfov: bool = False,
         depth_ckpt: str = "",
         late_fusion: bool = False,
         **kwargs,
@@ -72,6 +73,7 @@ class PointNavResNetCLIPPolicy(NetPolicy):
                 add_instance_linear_projection=add_instance_linear_projection,
                 croco_adapter=croco_adapter,
                 use_croco=use_croco,
+                use_hfov=use_hfov,
                 depth_ckpt=depth_ckpt,
                 late_fusion=late_fusion,
             ),
@@ -131,6 +133,7 @@ class PointNavResNetCLIPPolicy(NetPolicy):
             add_instance_linear_projection=config.habitat_baselines.rl.policy.add_instance_linear_projection,
             croco_adapter=config.habitat_baselines.rl.policy.croco_adapter,
             use_croco=config.habitat_baselines.rl.policy.use_croco,
+            use_hfov=config.habitat_baselines.rl.policy.use_hfov,
             depth_ckpt=depth_ckpt,
             late_fusion=late_fusion,
         )
@@ -181,6 +184,7 @@ class PointNavResNetCLIPNet(Net):
         add_instance_linear_projection: bool = False,
         croco_adapter: bool = False,
         use_croco: bool = False,
+        use_hfov: bool = False,
         late_fusion: bool = False,
     ):
         super().__init__()
@@ -192,6 +196,7 @@ class PointNavResNetCLIPNet(Net):
         self.late_fusion = late_fusion
         self.croco_adapter = croco_adapter
         self.use_croco = use_croco
+        self.use_hfov = use_hfov
         self._n_prev_action = 32
         if discrete_actions:
             self.prev_action_embedding = nn.Embedding(
@@ -316,6 +321,7 @@ class PointNavResNetCLIPNet(Net):
             rnn_input_size_info["instance_goal"] = instance_goal_size
 
         if self.use_croco and (
+            ImageGoalRotationSensor.cls_uuid in observation_space.spaces or
             InstanceImageGoalSensor.cls_uuid in observation_space.spaces or
             (CacheCrocoGoalPosSensor.cls_uuid in observation_space.spaces 
             and CacheCrocoGoalFeatSensor.cls_uuid in observation_space.spaces)
@@ -324,10 +330,10 @@ class PointNavResNetCLIPNet(Net):
                 observation_space=observation_space,
                 checkpoint='/srv/flash1/gchhablani3/goat/goat/models/encoders/croco/pretrained_models/CroCo_V2_ViTBase_SmallDecoder.pth', # TODO: Remove hardcoding
                 adapter=self.croco_adapter,
-                hidden_size=32, # NOTE: Total will be 196 * 32 = 6272 per goal
+                hidden_size=64, # NOTE: Total will be 196 * 32 = 6272 per goal
             )
             self.croco_binocular_encoder.to(torch.device("cuda" if torch.cuda.is_available() else "cpu"))
-            embedding_dim = 6272 # NOTE: Assuming the base decoder variant for now and FC is inside binocular encoder
+            embedding_dim = 3136 # NOTE: Assuming the base decoder variant for now and FC is inside binocular encoder
             print(
                 f"Binocular encoder embedding: {embedding_dim}, "
                 f"Add Instance linear: {add_instance_linear_projection}"
@@ -341,6 +347,18 @@ class PointNavResNetCLIPNet(Net):
             rnn_input_size += instance_goal_size
             rnn_input_size_info["instance_goal"] = instance_goal_size
 
+        if self.use_hfov and InstanceImageGoalHFOVSensor.cls_uuid in observation_space.spaces:
+            hfov_input_dim = int(
+                observation_space.spaces[InstanceImageGoalHFOVSensor.cls_uuid].high[0]
+            ) + 1
+            hfov_embedding_size = 32
+            self.hfov_embedding = nn.Embedding(
+                hfov_input_dim, hfov_embedding_size
+            )
+            
+            rnn_input_size += hfov_embedding_size
+            rnn_input_size_info["hfov_embedding"] = hfov_embedding_size
+        
         if EpisodicGPSSensor.cls_uuid in observation_space.spaces:
             input_gps_dim = observation_space.spaces[
                 EpisodicGPSSensor.cls_uuid
@@ -468,6 +486,7 @@ class PointNavResNetCLIPNet(Net):
                 instance_goal = self.instance_embedding(instance_goal)
             x.append(instance_goal)
         if self.use_croco and (
+            ImageGoalRotationSensor.cls_uuid in observations or
             InstanceImageGoalSensor.cls_uuid in observations or
             (CacheCrocoGoalPosSensor.cls_uuid in observations 
             and CacheCrocoGoalFeatSensor.cls_uuid in observations)
@@ -476,6 +495,9 @@ class PointNavResNetCLIPNet(Net):
             if self.add_instance_linear_projection:
                 instance_goal = self.instance_embedding(instance_goal)
             x.append(instance_goal)
+        if self.use_hfov and InstanceImageGoalHFOVSensor.cls_uuid in observations:
+            instance_goal_hfov = observations[InstanceImageGoalHFOVSensor.cls_uuid].long()
+            x.append(self.hfov_embedding(instance_goal_hfov).squeeze(dim=1))
         if (
             ClipImageGoalSensor.cls_uuid in observations
             and not self.late_fusion

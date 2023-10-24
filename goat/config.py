@@ -199,6 +199,7 @@ class OVONPolicyConfig(PolicyConfig):
     add_instance_linear_projection: bool = False
     croco_adapter: bool = False
     use_croco: bool = False
+    use_hfov: bool = False
     depth_ckpt: str = ""
     late_fusion: bool = False
 
@@ -395,5 +396,11 @@ class HabitatConfigPlugin(SearchPathPlugin):
     def manipulate_search_path(self, search_path: ConfigSearchPath) -> None:
         search_path.append(
             provider="habitat",
+            path="pkg://config/",
+        )
+        search_path.append(
+            provider="habitat",
             path="pkg://config/tasks/",
         )
+
+
