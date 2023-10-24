@@ -20,21 +20,25 @@ class CrocoBinocularEncoder(nn.Module):
     ):
         super().__init__()
         
-        self.goal_image = "instance_imagegoal" in observation_space.spaces
+        self.goal_imagenav = "image_goal_rotation" in observation_space.spaces
+        self.goal_instance_imagenav = "instance_imagegoal" in observation_space.spaces
         self.goal_features = "cache_croco_goal_feat" in observation_space.spaces and "cache_croco_goal_pos" in observation_space.spaces
         
         imagenet_mean = [0.485, 0.456, 0.406]
         imagenet_std = [0.229, 0.224, 0.225]
         self.preprocess = T.Compose([
-            T.Resize(224, interpolation=T.InterpolationMode.BICUBIC),
-            T.CenterCrop(224),
+            T.Resize(112, interpolation=T.InterpolationMode.BICUBIC),
+            T.CenterCrop(112),
             T.ConvertImageDtype(torch.float),
             T.Normalize(mean=imagenet_mean, std=imagenet_std)
         ])
         # device = "cuda" if torch.cuda.is_available() else "cpu"
         ckpt = torch.load(checkpoint)
-        self.encoder = Croco2ViTEncoder(adapter=adapter, **ckpt.get('croco_kwargs', {}))
-        self.decoder = Croco2ViTDecoder(adapter=adapter, **ckpt.get('croco_kwargs', {}))
+        kwargs = ckpt.get('croco_kwargs', {})
+        if 'img_size' in kwargs:
+            del kwargs['img_size']
+        self.encoder = Croco2ViTEncoder(adapter=adapter, img_size=112, **kwargs)
+        self.decoder = Croco2ViTDecoder(adapter=adapter, img_size=112, **kwargs)
         encoder_weights = {k:v for k,v in ckpt['model'].items() if k.startswith('enc') or k.startswith('patch')}
         msg = self.encoder.load_state_dict(encoder_weights, strict=False)
         print(f"Loading Croco encoder weights from {checkpoint}: {msg}")
@@ -73,12 +77,16 @@ class CrocoBinocularEncoder(nn.Module):
         rgb_feat, rgb_pos = self.encoder(rgb)
 
         # NOTE: Do we need to handle the number of environments here in any way?
-        if self.goal_image:
+        if self.goal_instance_imagenav:
             instance_imagegoal = observations["instance_imagegoal"]
             instance_imagegoal = instance_imagegoal.permute(0, 3, 1, 2)
             instance_imagegoal = self.preprocess(instance_imagegoal)
             goal_feat, goal_pos = self.encoder(instance_imagegoal)
-
+        elif self.goal_imagenav:
+            imagegoal = observations["image_goal_rotation"]
+            imagegoal = imagegoal.permute(0, 3, 1, 2)
+            imagegoal = self.preprocess(imagegoal)
+            goal_feat, goal_pos = self.encoder(imagegoal)
         elif self.goal_features:
             goal_feat, goal_pos = observations["cache_croco_goal_feat"], observations["cache_croco_goal_pos"].long()
 
