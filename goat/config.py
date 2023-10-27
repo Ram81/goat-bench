@@ -32,8 +32,9 @@ class ClipObjectGoalSensorConfig(LabSensorConfig):
 class GoatGoalSensorConfig(LabSensorConfig):
     type: str = "GoatGoalSensor"
     object_cache: str = ""
-    langauge_cache: str = ""
+    language_cache: str = ""
     image_cache: str = ""
+    image_cache_encoder: str = ""
 
 
 @dataclass
@@ -67,6 +68,7 @@ class GoatSoftSPLConfig(MeasurementConfig):
 @dataclass
 class GoatDistanceToGoalRewardConfig(MeasurementConfig):
     type: str = "GoatDistanceToGoalReward"
+    success_distance: float = 0.25
 
 
 @dataclass
@@ -301,6 +303,13 @@ cs.store(
     group="habitat/task/measurements",
     name="angle_success",
     node=AngleSuccessMeasurementConfig,
+)
+
+cs.store(
+    package="habitat.task.measurements.goat_distance_to_goal_reward",
+    group="habitat/task/measurements",
+    name="goat_distance_to_goal_reward",
+    node=GoatDistanceToGoalRewardConfig,
 )
 
 cs.store(

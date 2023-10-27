@@ -103,6 +103,17 @@ def clean_instruction(instruction):
     for prefix in first_3_words:
         instruction = instruction.replace(prefix, "")
         instruction = instruction.replace("\n", " ")
+    uuid = episode.instructions[0].lower()
+    first_3_words = [
+        "prefix: instruction: go",
+        "instruction: find the",
+        "instruction: go to",
+        "api_failure",
+        "instruction: locate the",
+    ]
+    for prefix in first_3_words:
+        uuid = uuid.replace(prefix, "")
+        uuid = uuid.replace("\n", " ").strip()
     return instruction.strip()
 
 
@@ -137,6 +148,8 @@ def cache_language_goals(dataset_path, output_path, model):
     files = glob.glob(os.path.join(dataset_path, "*json.gz"))
     instructions = set()
     first_3_words = set()
+
+    filtered_goals = 0
     for file in tqdm(files):
         dataset = load_dataset(file)
         for episode in dataset["episodes"]:
@@ -145,12 +158,17 @@ def cache_language_goals(dataset_path, output_path, model):
             cleaned_instruction = clean_instruction(
                 episode["instructions"][0].lower()
             )
+
             instructions.add(cleaned_instruction)
             first_3_words.add(
                 " ".join(episode["instructions"][0].lower().split(" ")[:3])
             )
 
-    print("Total instructions: {}".format(len(instructions)))
+    print(
+        "Total instructions: {}, Filtered: {}".format(
+            len(instructions), filtered_goals
+        )
+    )
     max_instruction_len = 0
     for instruction in instructions:
         max_instruction_len = max(
@@ -167,6 +185,7 @@ def cache_goat_goals(dataset_path, output_path, model):
     files = glob.glob(os.path.join(dataset_path, "*json.gz"))
     instructions = set()
     first_3_words = set()
+    filtered_goals = 0
     for file in tqdm(files):
         dataset = load_dataset(file)
         for goal_key, goals in dataset["goals"].items():
@@ -177,6 +196,11 @@ def cache_goat_goals(dataset_path, output_path, model):
                 # cleaned_instruction = clean_instruction(
                 #     episode["instructions"][0].lower()
                 # )
+
+                if len(cleaned_instruction.split(" ")) > 55:
+                    filtered_goals += 1
+                    continue
+
                 instructions.add(cleaned_instruction)
                 first_3_words.add(
                     " ".join(cleaned_instruction.lower().split(" ")[:3])

@@ -192,7 +192,7 @@ class GoatDistanceToGoal(Measure):
                     for view_point in goal["view_points"]
                 ]
                 distance_to_target = self._sim.geodesic_distance(
-                    current_position, viewpoints, episode
+                    current_position, viewpoints, None
                 )
             else:
                 logger.error(
@@ -210,6 +210,16 @@ class GoatDistanceToGoal(Measure):
                 "distance_to_target": distance_to_target,
                 "prev_distance_to_target": self.prev_distance_to_target,
             }
+        if not np.isfinite(
+            self._metric["distance_to_target"]
+        ) or not np.isfinite(self._metric["prev_distance_to_target"]):
+            print(
+                current_position,
+                self._previous_position,
+                task.last_action,
+                episode.tasks[task.active_subtask_idx],
+                self._metric,
+            )
 
 
 @registry.register_measure
@@ -247,7 +257,6 @@ class GoatSuccess(Measure):
 
         for t in episode.tasks:
             self._subtask_counts[t[1]] += 1
-            self._success_by_subtasks["{}_success".format(t[1])] = 0
 
         self.update_metric(episode=episode, task=task, *args, **kwargs)
 
@@ -265,15 +274,6 @@ class GoatSuccess(Measure):
             GoatDistanceToGoal.cls_uuid
         ].get_metric()
 
-        # print(
-        #     "Task id: {} - {} - {} - {}".format(
-        #         self._current_subtask_idx,
-        #         self._success_by_subtasks,
-        #         distance_to_target,
-        #         task._subtask_stop_called(),
-        #     )
-        # )
-
         if (
             task._subtask_stop_called()
             and distance_to_target["prev_distance_to_target"]
@@ -285,18 +285,24 @@ class GoatSuccess(Measure):
             self._subtask_success[self._current_subtask_idx] = 1.0
 
         success_by_subtask = {}
-        for k, v in self._subtask_counts.items():
-            success_by_subtask["{}_success".format(k)] = (
-                self._success_by_subtasks[k] / self._subtask_counts[k]
-            )
+        for k in ["object", "image", "description"]:
+            if self._success_by_subtasks[k] == 0:
+                success_by_subtask["{}_success".format(k)] = 0.0
+            else:
+                success_by_subtask["{}_success".format(k)] = (
+                    self._success_by_subtasks[k] / self._subtask_counts[k]
+                )
 
         num_subtask_success = sum(self._subtask_success) == len(episode.tasks)
         self._metric = {
+            "task_success": num_subtask_success
+            and getattr(task, "is_stop_called", False),
             "composite_success": num_subtask_success,
             "partial_success": sum(self._success_by_subtasks.values())
             / sum(self._subtask_counts.values()),
             # **success_by_subtask,
             "subtask_success": self._subtask_success,
+            **success_by_subtask,
         }
 
         if self._current_subtask_idx != task.active_subtask_idx:
@@ -364,7 +370,7 @@ class GoatSPL(Measure):
 
         self._previous_position = current_position
 
-        if ep_success[self._current_subtask_idx]:
+        if task._subtask_stop_called():
             spl = ep_success[self._current_subtask_idx] * (
                 self._start_end_episode_distance
                 / max(
@@ -500,7 +506,7 @@ class GoatDistanceToGoalReward(Measure):
     decrease of distance to the goal.
     """
 
-    cls_uuid: str = "distance_to_goal_reward"
+    cls_uuid: str = "goat_distance_to_goal_reward"
 
     def __init__(
         self, sim: Simulator, config: "DictConfig", *args: Any, **kwargs: Any
@@ -527,14 +533,28 @@ class GoatDistanceToGoalReward(Measure):
     ):
         distance_to_target = task.measurements.measures[
             GoatDistanceToGoal.cls_uuid
-        ].get_metric()["distance_to_target"]
+        ].get_metric()
+        # print(distance_to_target, self._previous_distance)
 
+        subtask_success_reward = 0
         # Handle case when subtask stop is called
         if task._subtask_stop_called():
-            self._previous_distance = distance_to_target
+            self._previous_distance = distance_to_target["distance_to_target"]
 
-        self._metric = -(distance_to_target - self._previous_distance)
-        self._previous_distance = distance_to_target
+            if (
+                distance_to_target["prev_distance_to_target"]
+                < self._config.success_distance
+            ):
+                subtask_success_reward = 5.0
+
+        self._metric = (
+            -(
+                distance_to_target["distance_to_target"]
+                - self._previous_distance
+            )
+            + subtask_success_reward
+        )
+        self._previous_distance = distance_to_target["distance_to_target"]
 
 
 @registry.register_measure

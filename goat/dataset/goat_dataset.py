@@ -135,21 +135,7 @@ class GoatDatasetV1(PointNavDatasetV1):
             deserialized = self.dedup_goals(deserialized)
 
         self.goals = deserialized["goals"]
-        # for goal_key, goal_val in deserialized["goals"].items():
-        #     self.goals[goal_key] = {}
-        #     for k, v in sub_task_goals.items():
-        #         if sub_task_type == "objectnav":
-        #             self.goals[sub_task_type][k] = [
-        #                 self.__deserialize_objectnav_goal(g) for g in v
-        #             ]
-        #         # elif sub_task_type == "languagenav":
-        #         #     self.goals[sub_task_type][k] = [
-        #         #         self.__deserialize_languagenav_goal(g) for g in v
-        #         #     ]
-        #         elif sub_task_type == "language+imagenav":
-        #             self.goals[sub_task_type][k] = [
-        #                 self.__deserialize_imagenav_goal(v)
-        #             ]
+        num_filtered_eps = 0
 
         for i, composite_episode in enumerate(deserialized["episodes"]):
             composite_episode["goals"] = []
@@ -171,6 +157,7 @@ class GoatDatasetV1(PointNavDatasetV1):
 
             composite_episode.goals = []
 
+            filtered_tasks = []
             for goal in composite_episode.tasks:
                 goal_type = goal[1]
                 goal_category = goal[0]
@@ -181,6 +168,41 @@ class GoatDatasetV1(PointNavDatasetV1):
                     for x in self.goals.values()
                     if x[0]["object_category"] == goal_category
                 ]
+
+                if goal_type == "description":
+                    goal_inst = [
+                        x
+                        for x in dset_same_cat_goals[0]
+                        if x["object_id"] == goal_inst_id
+                    ]
+                    if len(goal_inst[0]["lang_desc"].split(" ")) <= 55:
+                        filtered_tasks.append(goal)
+                    else:
+                        num_filtered_eps += 1
+                else:
+                    filtered_tasks.append(goal)
+
+            for goal in filtered_tasks:
+                goal_type = goal[1]
+                goal_category = goal[0]
+                goal_inst_id = goal[2]
+
+                dset_same_cat_goals = [
+                    x
+                    for x in self.goals.values()
+                    if x[0]["object_category"] == goal_category
+                ]
+                children_categories = dset_same_cat_goals[0][0][
+                    "children_object_categories"
+                ]
+                for child_category in children_categories:
+                    goal_key = "{}_{}".format(
+                        composite_episode.scene_id.split("/")[-1],
+                        child_category,
+                    )
+                    if goal_key not in self.goals:
+                        continue
+                    dset_same_cat_goals[0].extend(self.goals[goal_key])
 
                 assert (
                     len(dset_same_cat_goals) == 1
@@ -195,21 +217,5 @@ class GoatDatasetV1(PointNavDatasetV1):
                         if x["object_id"] == goal_inst_id
                     ]
                     composite_episode.goals.append(goal_inst)
-
-            # for goal_key, task in zip(
-            #     composite_episode.goals_keys_with_sequence(),
-            #     composite_episode.tasks,
-            # ):
-            #     # composite_episode.goals[task_type] = {}
-            #     task_type = task["task_type"]
-            #     # for goal_key in goal_keys:
-            #     if task_type in ["languagenav", "imagenav"]:
-            #         task_type = "language+imagenav"
-            #         goal_key = goal_key.replace('.basis.glb','')
-            #     try:
-            #         composite_episode.goals.append(self.goals[task_type][goal_key])
-            #     except Exception as e:
-            #         import pdb;pdb.set_trace()
-            #         print(e)
 
             self.episodes.append(composite_episode)  # type: ignore [attr-defined]
