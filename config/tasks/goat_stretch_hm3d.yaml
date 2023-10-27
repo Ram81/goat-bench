@@ -9,7 +9,7 @@ defaults:
 habitat:
   env_task: GymGoatEnv
   environment:
-    max_episode_steps: 500
+    max_episode_steps: 2500
 
   task:
     type: Goat-v1
@@ -17,7 +17,7 @@ habitat:
       subtask_stop:
         type: SubtaskStopAction
     success_measure: success
-    reward_measure: distance_to_goal_reward
+    reward_measure: goat_distance_to_goal_reward
 
   simulator:
     turn_angle: 30
@@ -40,4 +40,4 @@ habitat:
   dataset:
     type: Goat-v1
     split: train
-    data_path: data/datasets/goat/v0/{split}/{split}.json.gz
+    data_path: data/datasets/goat/v0.1.1_debug/{split}/{split}.json.gz

@@ -4,10 +4,10 @@
 #SBATCH --error=slurm_logs/dataset-%j.err
 #SBATCH --gpus 1
 #SBATCH --nodes 1
-#SBATCH --cpus-per-task 16
+#SBATCH --cpus-per-task 6
 #SBATCH --ntasks-per-node 1
 #SBATCH --partition=short
-#SBATCH --constraint=a40
+#SBATCH --constraint=2080_ti
 #SBATCH --exclude=conroy,ig-88
 #SBATCH --signal=USR1@100
 #SBATCH --requeue
@@ -23,6 +23,8 @@ source /srv/flash1/rramrakhya3/miniconda3/etc/profile.d/conda.sh
 conda deactivate
 conda activate goat
 
+export PYTHONPATH=/srv/flash1/rramrakhya3/fall_2023/habitat-sim/src_python/ 
+
 # SPLIT="val"
 # NUM_TASKS=$1
 # OUTPUT_PATH=$2
@@ -33,4 +35,5 @@ srun python goat/utils/cache_image_goals.py \
   --config $config \
   --input-path $input_path \
   --output-path $output_path \
-  --scene $scene
+  --scene $scene \
+  --encoder $encoder

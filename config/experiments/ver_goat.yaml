@@ -12,7 +12,7 @@ habitat:
     iterator_options:
       max_scene_repeat_steps: 50000
   task:
-    success_reward: 2.5
+    success_reward: 10.0
     slack_reward: -1e-3
   
   simulator:

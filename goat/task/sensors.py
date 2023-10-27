@@ -377,11 +377,6 @@ class LanguageGoalSensor(Sensor):
         task: EmbodiedTask,
         **kwargs: Any,
     ) -> Optional[int]:
-        # print(
-        #     "Episode: {} - {}".format(
-        #         dir(episode), isinstance(episode, GoatEpisode)
-        #     )
-        # )
         uuid = ""
         dummy_embedding = np.zeros((768,), dtype=np.float32)
         if isinstance(episode, GoatEpisode):
@@ -479,15 +474,16 @@ class CacheImageGoalSensor(Sensor):
         **kwargs: Any,
     ) -> Optional[int]:
         episode_id = f"{episode.scene_id}_{episode.episode_id}"
-
         if self._current_scene_id != episode.scene_id:
             self._current_scene_id = episode.scene_id
             scene_id = episode.scene_id.split("/")[-1].split(".")[0]
 
+            suffix = "embedding.pkl"
+            if isinstance(episode, GoatEpisode):
+                suffix = "goat_{}".format(suffix)
+
             self.cache = load_pickle(
-                os.path.join(
-                    self.cache_base_dir, f"{scene_id}_goat_embedding.pkl"
-                )
+                os.path.join(self.cache_base_dir, f"{scene_id}_{suffix}")
             )
 
         if self._current_episode_id != episode_id:
@@ -495,12 +491,6 @@ class CacheImageGoalSensor(Sensor):
 
             dummy_embedding = np.zeros((1024,), dtype=np.float32)
             if isinstance(episode, GoatEpisode):
-                # print(
-                #     "IIN GoatEpisode: {} - {}".format(
-                #         episode.tasks[task.active_subtask_idx],
-                #         isinstance(episode, GoatEpisode),
-                #     )
-                # )
                 if task.active_subtask_idx < len(episode.tasks):
                     if episode.tasks[task.active_subtask_idx][1] == "image":
                         instance_id = episode.tasks[task.active_subtask_idx][2]
@@ -508,12 +498,6 @@ class CacheImageGoalSensor(Sensor):
                         scene_id = episode.scene_id.split("/")[-1].split(".")[0]
 
                         uuid = "{}_{}".format(scene_id, instance_id)
-                        # print(
-                        #     instance_id,
-                        #     curent_task,
-                        #     scene_id,
-                        #     self.cache.get(uuid) is None,
-                        # )
 
                         self._current_episode_image_goal = self.cache[
                             "{}_{}".format(scene_id, instance_id)
@@ -593,8 +577,11 @@ class GoatGoalSensor(Sensor):
         config: "DictConfig",
         **kwargs: Any,
     ):
-        self.cache_base_dir = config.cache
-        self.cache = None
+        self.image_cache_base_dir = config.image_cache
+        self.image_encoder = config.image_cache_encoder
+        self.image_cache = None
+        self.language_cache = load_pickle(config.language_cache)
+        self.object_cache = load_pickle(config.object_cache)
         self._current_scene_id = ""
         self._current_episode_id = ""
         self._current_episode_image_goal = None
@@ -618,19 +605,48 @@ class GoatGoalSensor(Sensor):
         episode: Any,
         task: Any,
         **kwargs: Any,
-    ) -> Optional[int]:
+    ) -> np.ndarray:
         episode_id = f"{episode.scene_id}_{episode.episode_id}"
+
         if self._current_scene_id != episode.scene_id:
             self._current_scene_id = episode.scene_id
             scene_id = episode.scene_id.split("/")[-1].split(".")[0]
-            self.cache = load_pickle(
-                os.path.join(self.cache_base_dir, f"{scene_id}_embedding.pkl")
+            self.image_cache = load_pickle(
+                os.path.join(
+                    self.image_cache_base_dir,
+                    f"{scene_id}_{self.image_encoder}_embedding.pkl",
+                )
             )
 
-        if self._current_episode_id != episode_id:
-            self._current_episode_id = episode_id
-            self._current_episode_image_goal = self.cache[episode.goal_key][
-                episode.goal_image_id
-            ]["embedding"]
+        output_embedding = np.zeros((1024,), dtype=np.float32)
 
-        return self._current_episode_image_goal
+        task_type = "none"
+        if task.active_subtask_idx < len(episode.tasks):
+            if episode.tasks[task.active_subtask_idx][1] == "object":
+                category = episode.tasks[task.active_subtask_idx][0]
+                output_embedding = self.object_cache[category]
+                task_type = "object"
+            elif episode.tasks[task.active_subtask_idx][1] == "description":
+                instance_id = episode.tasks[task.active_subtask_idx][2]
+                goal = [
+                    g
+                    for g in episode.goals[task.active_subtask_idx]
+                    if g["object_id"] == instance_id
+                ]
+                uuid = goal[0]["lang_desc"].lower()
+                output_embedding = self.language_cache[uuid]
+                task_type = "lang"
+            elif episode.tasks[task.active_subtask_idx][1] == "image":
+                instance_id = episode.tasks[task.active_subtask_idx][2]
+                curent_task = episode.tasks[task.active_subtask_idx]
+                scene_id = episode.scene_id.split("/")[-1].split(".")[0]
+
+                uuid = "{}_{}".format(scene_id, instance_id)
+
+                output_embedding = self.image_cache[
+                    "{}_{}".format(scene_id, instance_id)
+                ][curent_task[-1]]["embedding"]
+                task_type = "image"
+            else:
+                raise NotImplementedError
+        return output_embedding

@@ -26,7 +26,7 @@ if __name__ == "__main__":
     parser.add_argument(
         "--config-path",
         type=str,
-        default="configs/tasks/goat_stretch_hm3d.yaml",
+        default="config/tasks/goat_stretch_hm3d.yaml",
     )
     args = parser.parse_args()
     main(args.config_path)
