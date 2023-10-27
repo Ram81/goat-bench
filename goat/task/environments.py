@@ -39,7 +39,7 @@ class GoatRLEnv(RLTaskEnv):
 
         reward += current_measure
 
-        if self._episode_success():
+        if self._episode_success()["composite_success"] == 1.0:
             reward += self.config.task.success_reward
 
         return reward

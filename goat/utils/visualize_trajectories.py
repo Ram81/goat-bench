@@ -99,7 +99,10 @@ def generate_trajectories(cfg, video_dir="", num_episodes=1):
                 ):
                     best_action = HabitatSimActions.subtask_stop
 
-                if best_action == HabitatSimActions.stop:
+                task_id = env.task.active_subtask_idx
+                if best_action == HabitatSimActions.stop and task_id < len(
+                    episode.tasks
+                ):
                     best_action = HabitatSimActions.subtask_stop
 
                 observations = env.step(best_action)
@@ -111,11 +114,11 @@ def generate_trajectories(cfg, video_dir="", num_episodes=1):
                     )
 
                 info = env.get_metrics()
-                print(
-                    "Action: {}, Reward: {}".format(
-                        best_action, info["distance_to_goal_reward"]
-                    )
-                )
+                # print(
+                #     "Action: {}, Reward: {}".format(
+                #         best_action, info["goat_distance_to_goal_reward"]
+                #     )
+                # )
                 frame = observations_to_image(
                     {"rgb": observations["rgb"]}, info
                 )
@@ -134,6 +137,7 @@ def generate_trajectories(cfg, video_dir="", num_episodes=1):
                 obs_list.append(frame)
 
                 success = info["success"]
+            print("ep end", success, info["distance_to_goal"])
 
             for k, v in success.items():
                 if isinstance(v, list):
@@ -186,9 +190,11 @@ def main():
         config.habitat.task.measurements.success = GoatSuccessConfig()
         config.habitat.task.measurements.spl = GoatSPLConfig()
         config.habitat.task.measurements.soft_spl = GoatSoftSPLConfig()
-        config.habitat.task.measurements.distance_to_goal_reward = (
-            GoatDistanceToGoalRewardConfig()
-        )
+        print(config.habitat.task.measurements)
+        # del config.habitat.task.measurements["distance_to_goal_reward"]
+        config.habitat.task.measurements[
+            "goat_distance_to_goal_reward"
+        ] = GoatDistanceToGoalRewardConfig()
         config.habitat.task.measurements.success.success_distance = 0.25
 
     generate_trajectories(
