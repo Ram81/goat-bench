@@ -171,5 +171,6 @@ def get_transform(name, size):
         return CLIPTransform(size)
     elif name == "clip+weak":
         return CLIPWeakTransform(size)
+
     else:
         raise ValueError(f"Unknown transform {name}")

@@ -99,35 +99,21 @@ class CacheGoals:
                 img = env.task.sensor_suite.sensors[
                         "instance_imagegoal"
                     ]._get_instance_image_goal(img_goal)
-
+                
                 if self.add_noise:
                     img = self.apply_noise(img)
 
-                if self.encoder_type == "VC-1":
-                    # vc1_file = f"vc1_embedding_{goal_idx}.npy"
-                    vc1_embedding = self.encoder.embed_vision(img)
-                
-                    metadata = dict(
-                        hfov=img_goal.hfov,
-                        object_id=goal_val.object_id,
-                        position=img_goal.position,
-                        rotation=img_goal.rotation,
-                        goal_id=goal_idx,
-                        embedding=vc1_embedding,
-                    )
-
-                elif self.encoder_type == "Croco-V2":
-                    # croco_file = f"croco_embedding_{goal_idx}.npy"
-                    croco_embedding = self.encoder.embed_vision(img)
-                    
-                    metadata = dict(
-                        hfov=img_goal.hfov,
-                        object_id=goal_val.object_id,
-                        position=img_goal.position,
-                        rotation=img_goal.rotation,
-                        goal_id=goal_idx,
-                        embedding=croco_embedding,
-                    )
+                # vc1_file = f"vc1_embedding_{goal_idx}.npy"
+                embedding = self.encoder.embed_vision(img)
+            
+                metadata = dict(
+                    hfov=img_goal.hfov,
+                    object_id=goal_val.object_id,
+                    position=img_goal.position,
+                    rotation=img_goal.rotation,
+                    goal_id=goal_idx,
+                    embedding=embedding,
+                )
                 goals_meta.append(metadata)
 
             scene_id = goal_k.split("_")[0]
