@@ -43,6 +43,7 @@ class PointNavResNetCLIPPolicy(NetPolicy):
         add_instance_linear_projection: bool = False,
         croco_adapter: bool = False,
         use_croco: bool = False,
+        croco_ckpt: str = None,
         use_hfov: bool = False,
         depth_ckpt: str = "",
         late_fusion: bool = False,
@@ -73,6 +74,7 @@ class PointNavResNetCLIPPolicy(NetPolicy):
                 add_instance_linear_projection=add_instance_linear_projection,
                 croco_adapter=croco_adapter,
                 use_croco=use_croco,
+                croco_ckpt=croco_ckpt,
                 use_hfov=use_hfov,
                 depth_ckpt=depth_ckpt,
                 late_fusion=late_fusion,
@@ -133,6 +135,7 @@ class PointNavResNetCLIPPolicy(NetPolicy):
             add_instance_linear_projection=config.habitat_baselines.rl.policy.add_instance_linear_projection,
             croco_adapter=config.habitat_baselines.rl.policy.croco_adapter,
             use_croco=config.habitat_baselines.rl.policy.use_croco,
+            croco_ckpt=config.habitat_baselines.rl.policy.croco_ckpt,
             use_hfov=config.habitat_baselines.rl.policy.use_hfov,
             depth_ckpt=depth_ckpt,
             late_fusion=late_fusion,
@@ -184,6 +187,7 @@ class PointNavResNetCLIPNet(Net):
         add_instance_linear_projection: bool = False,
         croco_adapter: bool = False,
         use_croco: bool = False,
+        croco_ckpt: str = None,
         use_hfov: bool = False,
         late_fusion: bool = False,
     ):
@@ -196,6 +200,7 @@ class PointNavResNetCLIPNet(Net):
         self.late_fusion = late_fusion
         self.croco_adapter = croco_adapter
         self.use_croco = use_croco
+        self.croco_ckpt = croco_ckpt
         self.use_hfov = use_hfov
         self._n_prev_action = 32
         if discrete_actions:
@@ -210,7 +215,6 @@ class PointNavResNetCLIPNet(Net):
         rnn_input_size = self._n_prev_action  # test
         rnn_input_size_info = {"prev_action": self._n_prev_action}
 
-        # RGB Encoder
         self.visual_encoder = ResNetCLIPEncoder(
             observation_space,
             backbone_type=backbone,
@@ -328,7 +332,7 @@ class PointNavResNetCLIPNet(Net):
         ):
             self.croco_binocular_encoder = CrocoBinocularEncoder(
                 observation_space=observation_space,
-                checkpoint='/srv/flash1/gchhablani3/goat/goat/models/encoders/croco/pretrained_models/CroCo_V2_ViTBase_SmallDecoder.pth', # TODO: Remove hardcoding
+                checkpoint=self.croco_ckpt,
                 adapter=self.croco_adapter,
                 hidden_size=64, # NOTE: Total will be 49 * 64 per goal
             )
