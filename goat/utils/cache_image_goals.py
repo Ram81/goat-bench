@@ -99,11 +99,10 @@ class CacheGoals:
                 img = env.task.sensor_suite.sensors[
                         "instance_imagegoal"
                     ]._get_instance_image_goal(img_goal)
-                
+
                 if self.add_noise:
                     img = self.apply_noise(img)
 
-                # vc1_file = f"vc1_embedding_{goal_idx}.npy"
                 embedding = self.encoder.embed_vision(img)
             
                 metadata = dict(
