@@ -19,6 +19,3 @@ cd ..
 
 pip install -r requirements.txt
 pip install git+https://github.com/openai/CLIP.git
-
-# Clone croco
-git clone git@github.com:gchhablani/croco-with-adapter.git goat/models/encoders/croco
