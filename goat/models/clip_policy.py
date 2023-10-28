@@ -19,9 +19,17 @@ from habitat_baselines.utils.common import get_num_actions
 from torch import nn as nn
 from torchvision import transforms as T
 
-from goat.task.sensors import (CacheImageGoalSensor, ClipGoalSelectorSensor,
-                               ClipImageGoalSensor, ClipObjectGoalSensor,
-                               GoatGoalSensor, LanguageGoalSensor)
+from goat.task.sensors import (
+    CacheImageGoalSensor,
+    ClipGoalSelectorSensor,
+    ClipImageGoalSensor,
+    ClipObjectGoalSensor,
+    GoatGoalSensor,
+    LanguageGoalSensor,
+    CacheCrocoGoalFeatSensor,
+    CacheCrocoGoalPosSensor,
+    ImageGoalRotationSensor,
+)
 
 from habitat.tasks.nav.instance_image_nav_task import InstanceImageGoalSensor, InstanceImageGoalHFOVSensor
 from goat.models.encoders.croco_binocular_encoder import CrocoBinocularEncoder
@@ -489,6 +497,7 @@ class PointNavResNetCLIPNet(Net):
             if self.add_instance_linear_projection:
                 instance_goal = self.instance_embedding(instance_goal)
             x.append(instance_goal)
+
         if self.use_croco and (
             ImageGoalRotationSensor.cls_uuid in observations or
             InstanceImageGoalSensor.cls_uuid in observations or
