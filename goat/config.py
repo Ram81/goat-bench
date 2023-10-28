@@ -199,6 +199,7 @@ class OVONPolicyConfig(PolicyConfig):
     add_instance_linear_projection: bool = False
     croco_adapter: bool = False
     use_croco: bool = False
+    croco_ckpt: str = "goat/models/encoders/croco/pretrained_models/CroCo_V2_ViTBase_SmallDecoder.pth"
     use_hfov: bool = False
     depth_ckpt: str = ""
     late_fusion: bool = False
