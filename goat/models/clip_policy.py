@@ -330,7 +330,7 @@ class PointNavResNetCLIPNet(Net):
                 observation_space=observation_space,
                 checkpoint='/srv/flash1/gchhablani3/goat/goat/models/encoders/croco/pretrained_models/CroCo_V2_ViTBase_SmallDecoder.pth', # TODO: Remove hardcoding
                 adapter=self.croco_adapter,
-                hidden_size=64, # NOTE: Total will be 196 * 32 = 6272 per goal
+                hidden_size=64, # NOTE: Total will be 49 * 64 per goal
             )
             self.croco_binocular_encoder.to(torch.device("cuda" if torch.cuda.is_available() else "cpu"))
             embedding_dim = 3136 # NOTE: Assuming the base decoder variant for now and FC is inside binocular encoder
