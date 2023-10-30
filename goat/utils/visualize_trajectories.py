@@ -88,6 +88,9 @@ def generate_trajectories(cfg, video_dir="", num_episodes=1):
             if goal_position is None:
                 continue
 
+            # if episode_id < 2:
+            #     continue
+
             while not env.episode_over:
                 goal_position, goal_rotation = get_nearest_goal(episode, env)
                 best_action = follower.get_next_action(goal_position)
@@ -158,7 +161,11 @@ def generate_trajectories(cfg, video_dir="", num_episodes=1):
             )
         print("Total episodes: {}".format(total_episodes))
 
-        print("\n\nEpisode success: {}".format(total_success))
+        print(
+            "\n\nEpisode success: {}".format(
+                {k: v / total_episodes for k, v in total_success.items()}
+            )
+        )
         print("SPL: {}, {}".format(spl, total_episodes))
         print("SoftSPL: {}, {}".format(softspl, total_episodes))
         print("Success: {}, {}".format(total_success, total_episodes))

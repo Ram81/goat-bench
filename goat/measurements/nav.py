@@ -300,7 +300,6 @@ class GoatSuccess(Measure):
             "composite_success": num_subtask_success,
             "partial_success": sum(self._success_by_subtasks.values())
             / sum(self._subtask_counts.values()),
-            # **success_by_subtask,
             "subtask_success": self._subtask_success,
             **success_by_subtask,
         }

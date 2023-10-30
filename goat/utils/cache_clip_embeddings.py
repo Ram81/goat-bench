@@ -103,17 +103,17 @@ def clean_instruction(instruction):
     for prefix in first_3_words:
         instruction = instruction.replace(prefix, "")
         instruction = instruction.replace("\n", " ")
-    uuid = episode.instructions[0].lower()
-    first_3_words = [
-        "prefix: instruction: go",
-        "instruction: find the",
-        "instruction: go to",
-        "api_failure",
-        "instruction: locate the",
-    ]
-    for prefix in first_3_words:
-        uuid = uuid.replace(prefix, "")
-        uuid = uuid.replace("\n", " ").strip()
+    # uuid = episode.instructions[0].lower()
+    # first_3_words = [
+    #     "prefix: instruction: go",
+    #     "instruction: find the",
+    #     "instruction: go to",
+    #     "api_failure",
+    #     "instruction: locate the",
+    # ]
+    # for prefix in first_3_words:
+    #     uuid = uuid.replace(prefix, "")
+    #     uuid = uuid.replace("\n", " ").strip()
     return instruction.strip()
 
 
@@ -158,6 +158,10 @@ def cache_language_goals(dataset_path, output_path, model):
             cleaned_instruction = clean_instruction(
                 episode["instructions"][0].lower()
             )
+
+            if len(cleaned_instruction.split(" ")) > 55:
+                filtered_goals += 1
+                continue
 
             instructions.add(cleaned_instruction)
             first_3_words.add(
