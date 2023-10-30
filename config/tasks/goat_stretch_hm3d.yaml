@@ -40,4 +40,4 @@ habitat:
   dataset:
     type: Goat-v1
     split: train
-    data_path: data/datasets/goat/v0.1.1_debug/{split}/{split}.json.gz
+    data_path: data/datasets/goat/v0.1.3/{split}/{split}.json.gz
