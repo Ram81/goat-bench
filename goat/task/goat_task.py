@@ -85,6 +85,12 @@ class GoatTask(NavigationTask):  # TODO
         self.active_subtask_idx = 0
         self.last_action = None
 
+    def reset(self, *args: Any, **kwargs: Any) -> None:
+        self.is_sub_task_stop_called = False
+        self.active_subtask_idx = 0
+        self.last_action = None
+        return super().reset(*args, **kwargs)
+
     def _subtask_stop_called(self, *args: Any, **kwargs: Any) -> bool:
         return isinstance(self.last_action, SubtaskStopAction)
 
