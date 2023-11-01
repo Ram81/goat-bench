@@ -6,6 +6,7 @@ import numpy as np
 import torch
 from gym import spaces
 from gym.spaces import Dict as SpaceDict
+from habitat.config import read_write
 from habitat.sims.habitat_simulator.actions import HabitatSimActions
 from habitat.tasks.nav.nav import EpisodicCompassSensor, EpisodicGPSSensor
 from habitat.tasks.nav.object_nav_task import ObjectGoalSensor
@@ -124,6 +125,17 @@ class GoatHighLevelPolicyNet(Net):
                 ]
             }
         )
+        # TODO: Find a better way to do this
+        # Set the config croco parameters to False explicitly!
+        original_params = {}
+        with read_write(config):
+            original_params['use_croco'] = config.habitat_baselines.rl.policy.use_croco
+            config.habitat_baselines.rl.policy.use_croco=False
+            original_params['croco_adapter'] = config.habitat_baselines.rl.policy.croco_adapter
+            config.habitat_baselines.rl.policy.croco_adapter=False
+            original_params['add_instance_linear_projection'] = config.habitat_baselines.rl.policy.add_instance_linear_projection
+            config.habitat_baselines.rl.policy.add_instance_linear_projection=False
+            
         self.ovon_policy = ovon_policy_cls.from_config(
             config,
             ovon_obs_space,
@@ -158,7 +170,7 @@ class GoatHighLevelPolicyNet(Net):
         )
         missing_keys = self.language_policy.load_state_dict(
             self.load_ckpt(
-                "data/new_checkpoints/languagenav/ver/resnetclip_rgb_bert_text/seed_3/ckpt.18.pth"
+                "/srv/flash1/rramrakhya3/fall_2023/goat/data/new_checkpoints/languagenav/ver/resnetclip_rgb_bert_text/seed_3/ckpt.18.pth"
             )
         )
         print("Language nav missing keys: {}\n\n".format(missing_keys))
@@ -177,6 +189,11 @@ class GoatHighLevelPolicyNet(Net):
         image_policy_cls = baseline_registry.get_policy(
             "PointNavResnetCLIPPolicy"
         )
+        
+        with read_write(config):
+            config.habitat_baselines.rl.policy.use_croco = original_params['use_croco']
+            config.habitat_baselines.rl.policy.croco_adapter = original_params['croco_adapter']
+            config.habitat_baselines.rl.policy.add_instance_linear_projection=original_params['add_instance_linear_projection']
         self.image_policy = image_policy_cls.from_config(
             config,
             iinav_obs_space,
@@ -184,7 +201,9 @@ class GoatHighLevelPolicyNet(Net):
         )
         missing_keys = self.image_policy.load_state_dict(
             self.load_ckpt(
-                "data/new_checkpoints/iin/ver/resnetclip_rgb_vc1_image/seed_1/ckpt.70.pth"
+                # "data/new_checkpoints/iin/ver/resnetclip_rgb_vc1_image/seed_1/ckpt.70.pth"
+                "/srv/flash1/gchhablani3/goat/data/new_checkpoints/iin/ver/resnetclip_rgb_croco_image/4_gpus/ckpt.28.pth"
+                
             )
         )
         print("IIN missing keys: {}".format(missing_keys))

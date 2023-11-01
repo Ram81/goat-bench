@@ -21,7 +21,7 @@ class CrocoBinocularEncoder(nn.Module):
         super().__init__()
         
         self.goal_imagenav = "image_goal_rotation" in observation_space.spaces
-        self.goal_instance_imagenav = "instance_imagegoal" in observation_space.spaces
+        self.goal_instance_imagenav = "goat_instance_imagegoal" or "instance_imagegoal" in observation_space.spaces
         self.goal_features = "cache_croco_goal_feat" in observation_space.spaces and "cache_croco_goal_pos" in observation_space.spaces
         
         imagenet_mean = [0.485, 0.456, 0.406]
@@ -78,7 +78,7 @@ class CrocoBinocularEncoder(nn.Module):
 
         # NOTE: Do we need to handle the number of environments here in any way?
         if self.goal_instance_imagenav:
-            instance_imagegoal = observations["instance_imagegoal"]
+            instance_imagegoal = observations["instance_imagegoal"] if "instance_imagegoal" in observations else observations["goat_instance_imagegoal"]
             instance_imagegoal = instance_imagegoal.permute(0, 3, 1, 2)
             instance_imagegoal = self.preprocess(instance_imagegoal)
             goal_feat, goal_pos = self.encoder(instance_imagegoal)

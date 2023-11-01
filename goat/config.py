@@ -27,6 +27,9 @@ class ClipObjectGoalSensorConfig(LabSensorConfig):
     prompt: str = "Find and go to {category}"
     cache: str = "data/clip_embeddings/ovon_hm3d_cache.pkl"
 
+@dataclass
+class GoatInstanceImageGoalSensorConfig(LabSensorConfig):
+    type: str = "GoatInstanceImageGoalSensor"
 
 @dataclass
 class GoatGoalSensorConfig(LabSensorConfig):
@@ -251,6 +254,13 @@ cs.store(
     group="habitat/task/lab_sensors",
     name="clip_objectgoal_sensor",
     node=ClipObjectGoalSensorConfig,
+)
+
+cs.store(
+    package=f"habitat.task.lab_sensors.goat_instance_imagegoal_sensor",
+    group="habitat/task/lab_sensors",
+    name="goat_instance_imagegoal_sensor",
+    node=GoatInstanceImageGoalSensorConfig,
 )
 
 cs.store(
