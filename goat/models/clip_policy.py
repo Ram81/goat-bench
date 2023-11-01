@@ -29,6 +29,7 @@ from goat.task.sensors import (
     CacheCrocoGoalFeatSensor,
     CacheCrocoGoalPosSensor,
     ImageGoalRotationSensor,
+    GoatInstanceImageGoalSensor,
 )
 
 from habitat.tasks.nav.instance_image_nav_task import InstanceImageGoalSensor, InstanceImageGoalHFOVSensor
@@ -335,6 +336,7 @@ class PointNavResNetCLIPNet(Net):
         if self.use_croco and (
             ImageGoalRotationSensor.cls_uuid in observation_space.spaces or
             InstanceImageGoalSensor.cls_uuid in observation_space.spaces or
+            GoatInstanceImageGoalSensor.cls_uuid in observation_space.spaces or
             (CacheCrocoGoalPosSensor.cls_uuid in observation_space.spaces 
             and CacheCrocoGoalFeatSensor.cls_uuid in observation_space.spaces)
         ):
@@ -501,6 +503,7 @@ class PointNavResNetCLIPNet(Net):
         if self.use_croco and (
             ImageGoalRotationSensor.cls_uuid in observations or
             InstanceImageGoalSensor.cls_uuid in observations or
+            GoatInstanceImageGoalSensor.cls_uuid in observations or
             (CacheCrocoGoalPosSensor.cls_uuid in observations 
             and CacheCrocoGoalFeatSensor.cls_uuid in observations)
         ):

@@ -4,13 +4,18 @@ import random
 from typing import TYPE_CHECKING, Any, Optional
 
 import numpy as np
-from gym import spaces
+from gym import spaces, Space
+import habitat_sim
 from habitat.core.embodied_task import EmbodiedTask
 from habitat.core.registry import registry
-from habitat.core.simulator import RGBSensor, Sensor, SensorTypes, Simulator
+from habitat.core.simulator import RGBSensor, Sensor, SensorTypes, Simulator, VisualObservation
 from habitat.core.utils import try_cv2_import
+from habitat.core.logging import logger
 from habitat.tasks.nav.nav import NavigationEpisode
-
+from habitat.tasks.nav.instance_image_nav_task import InstanceImageParameters, InstanceImageGoal
+from habitat_sim.agent.agent import AgentState, SixDOFPose
+from habitat.utils.geometry_utils import quaternion_from_coeff
+from habitat_sim import bindings as hsim
 from goat.task.goat_task import GoatEpisode
 
 cv2 = try_cv2_import()
@@ -801,3 +806,156 @@ class CacheCrocoGoalPosSensor(Sensor):
             ]["embedding"][1]
 
         return self._current_episode_image_goal_pos
+
+
+@registry.register_sensor
+class GoatInstanceImageGoalSensor(RGBSensor):
+    """A sensor for instance-based image goal specification used by the
+    InstanceImageGoal Navigation task. Image goals are rendered according to
+    camera parameters (resolution, HFOV, extrinsics) specified by the dataset.
+
+    Args:
+        sim: a reference to the simulator for rendering instance image goals.
+        config: a config for the InstanceImageGoalSensor sensor.
+        dataset: a Instance Image Goal navigation dataset that contains a
+        dictionary mapping goal IDs to instance image goals.
+    """
+
+    cls_uuid: str = "goat_instance_imagegoal"
+    _current_image_goal: Optional[VisualObservation]
+    _current_episode_id: Optional[str]
+
+    def __init__(
+        self,
+        sim,
+        config: "DictConfig",
+        dataset: Any,
+        *args: Any,
+        **kwargs: Any,
+    ):
+        self._dataset = dataset
+        self._sim = sim
+        super().__init__(config=config)
+        self._current_episode_id = None
+        self._current_image_goal = None
+
+    def _get_uuid(self, *args: Any, **kwargs: Any) -> str:
+        return self.cls_uuid
+
+    def _get_observation_space(self, *args: Any, **kwargs: Any) -> Space:
+        # goals = next(iter(self._dataset.goals.values()))
+        # logger.info(goals)
+        # H, W = (
+        #     goals.image_goals[0]
+        #     .image_dimensions
+        # )
+        return spaces.Box(low=0, high=255, shape=(512, 512, 3), dtype=np.uint8)
+
+    def _add_sensor(
+        self, img_params: InstanceImageParameters, sensor_uuid: str
+    ) -> None:
+        spec = habitat_sim.CameraSensorSpec()
+        spec.uuid = sensor_uuid
+        spec.sensor_type = habitat_sim.SensorType.COLOR
+        spec.resolution = img_params.image_dimensions
+        spec.hfov = img_params.hfov
+        spec.sensor_subtype = habitat_sim.SensorSubType.PINHOLE
+        self._sim.add_sensor(spec)
+
+        agent = self._sim.get_agent(0)
+        agent_state = agent.get_state()
+        agent.set_state(
+            AgentState(
+                position=agent_state.position,
+                rotation=agent_state.rotation,
+                sensor_states={
+                    **agent_state.sensor_states,
+                    sensor_uuid: SixDOFPose(
+                        position=np.array(img_params.position),
+                        rotation=quaternion_from_coeff(img_params.rotation),
+                    ),
+                },
+            ),
+            infer_sensor_states=False,
+        )
+
+    def _remove_sensor(self, sensor_uuid: str) -> None:
+        agent = self._sim.get_agent(0)
+        del self._sim._sensors[sensor_uuid]
+        hsim.SensorFactory.delete_subtree_sensor(agent.scene_node, sensor_uuid)
+        del agent._sensors[sensor_uuid]
+        agent.agent_config.sensor_specifications = [
+            s
+            for s in agent.agent_config.sensor_specifications
+            if s.uuid != sensor_uuid
+        ]
+
+    def _get_instance_image_goal(
+        self, img_params: InstanceImageParameters
+    ) -> VisualObservation:
+        sensor_uuid = f"{self.cls_uuid}_sensor"
+        self._add_sensor(img_params, sensor_uuid)
+
+        self._sim._sensors[sensor_uuid].draw_observation()
+        img = self._sim._sensors[sensor_uuid].get_observation()[:, :, :3]
+
+        self._remove_sensor(sensor_uuid)
+        return img
+
+    def get_observation(
+        self,
+        *args: Any,
+        episode: Any,
+        task: Any,
+        **kwargs: Any,
+    ) -> Optional[VisualObservation]:
+
+        episode_id = f"{episode.scene_id} {episode.episode_id}"
+        if self._current_episode_id != episode_id:
+            self._current_episode_id = episode_id
+
+            dummy_image = np.zeros((512, 512, 3), dtype=np.uint8)
+            if isinstance(episode, GoatEpisode):
+                if task.active_subtask_idx < len(episode.tasks):
+                    if episode.tasks[task.active_subtask_idx][1] == "image":
+                        current_task = episode.tasks[task.active_subtask_idx]
+                        instance_id = current_task[2]
+                        goal_image_id = current_task[-1]
+                        goal = [
+                            g for g in episode.goals[task.active_subtask_idx]
+                            if g["object_id"] == instance_id
+                        ]
+                        scene_id = episode.scene_id.split('/')[-1].split(".")[0]
+                        
+                        goal = [
+                            g
+                            for g in episode.goals[task.active_subtask_idx]
+                            if g["object_id"] == instance_id
+                        ]
+                        img_params = InstanceImageParameters(**goal[0]['image_goals'][goal_image_id])
+                        self._current_image_goal = self._get_instance_image_goal(img_params)
+                    else:
+                        self._current_image_goal = dummy_image
+                else:
+                    self._current_image_goal = dummy_image
+            else:
+                if len(episode.goals) == 0:
+                    logger.error(
+                        f"No goal specified for episode {episode.episode_id}."
+                    )
+                    return None
+                if not isinstance(episode.goals[0], InstanceImageGoal):
+                    logger.error(
+                        f"First goal should be InstanceImageGoal, episode {episode.episode_id}."
+                    )
+                    return None
+
+                episode_uniq_id = f"{episode.scene_id} {episode.episode_id}"
+                if episode_uniq_id == self._current_episode_id:
+                    return self._current_image_goal
+
+                img_params = episode.goals[0].image_goals[episode.goal_image_id]
+                self._current_image_goal = self._get_instance_image_goal(img_params)
+                self._current_episode_id = episode_uniq_id
+
+        return self._current_image_goal
