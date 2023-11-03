@@ -52,6 +52,15 @@ class CacheGoals:
         return env
 
     def run(self, scene):
+        if os.path.exists(
+            os.path.join(
+                self.output_path,
+                f"{scene}_{self.encoder_name}_goat_embedding.pkl",
+            )
+        ):
+            print("Scene already cached: {}".format(scene))
+            return
+
         data = {}
         data_goal = {}
         env = self.config_env(scene)
@@ -97,7 +106,7 @@ if __name__ == "__main__":
     parser.add_argument(
         "--config",
         type=str,
-        default="configs/experiments/instance_imagenav_v2/ver_ovrl_instance_imagenav.yaml",
+        default="config/tasks/instance_imagenav_stretch_hm3d.yaml",
     )
     parser.add_argument(
         "--input-path",
