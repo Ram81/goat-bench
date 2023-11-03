@@ -1,39 +1,40 @@
-#!/bin/bash
-#SBATCH --job-name=goat
-#SBATCH --output=slurm_logs/goat-ver-%j.out
-#SBATCH --error=slurm_logs/goat-ver-%j.err
-#SBATCH --gpus 4
-#SBATCH --nodes 1
-#SBATCH --cpus-per-task 10
-#SBATCH --ntasks-per-node 4
-#SBATCH --constraint=a40
-#SBATCH --exclude=gundam,xaea-12,baymax
-#SBATCH --partition=short
-#SBATCH --signal=USR1@100
-#SBATCH --requeue
+# #!/bin/bash
+# #SBATCH --job-name=goat
+# #SBATCH --output=slurm_logs/goat-ver-%j.out
+# #SBATCH --error=slurm_logs/goat-ver-%j.err
+# #SBATCH --gpus 4
+# #SBATCH --nodes 1
+# #SBATCH --cpus-per-task 10
+# #SBATCH --ntasks-per-node 4
+# #SBATCH --constraint=a40
+# #SBATCH --exclude=gundam,xaea-12,baymax
+# #SBATCH --partition=short
+# #SBATCH --signal=USR1@100
+# #SBATCH --requeue
 
 export GLOG_minloglevel=2
 export HABITAT_SIM_LOG=quiet
 export MAGNUM_LOG=quiet
 
-MAIN_ADDR=$(scontrol show hostnames "${SLURM_JOB_NODELIST}" | head -n 1)
-export MAIN_ADDR
+# MAIN_ADDR=$(scontrol show hostnames "${SLURM_JOB_NODELIST}" | head -n 1)
+# export MAIN_ADDR
 
-source /srv/flash1/rramrakhya3/miniconda3/etc/profile.d/conda.sh
-conda deactivate
-conda activate goat
+# source /srv/flash1/rramrakhya3/miniconda3/etc/profile.d/conda.sh
+# conda deactivate
+# conda activate goat
 
 export PYTHONPATH=/srv/flash1/rramrakhya3/fall_2023/habitat-sim/src_python/
 
-TENSORBOARD_DIR="tb/goat/ver/resnetclip_rgb_multimodal/seed_1/"
-CHECKPOINT_DIR="data/new_checkpoints/goat/ver/resnetclip_rgb_multimodal/seed_1/"
+TENSORBOARD_DIR="tb/goat/ver/resnetclip_rgb_multimodal/seed_1_debug_v5/"
+CHECKPOINT_DIR="data/new_checkpoints/goat/ver/resnetclip_rgb_multimodal/seed_1_debug_v5/"
 DATA_PATH="data/datasets/goat/v0.1.3/"
 
-srun python -um goat.run \
+#srun 
+python -um goat.run \
   --run-type train \
   --exp-config config/experiments/ver_goat.yaml \
   habitat_baselines.trainer_name="ver" \
-  habitat_baselines.num_environments=32 \
+  habitat_baselines.num_environments=2 \
   habitat_baselines.rl.policy.name=PointNavResnetCLIPPolicy \
   habitat_baselines.rl.ddppo.train_encoder=False \
   habitat_baselines.rl.ddppo.backbone=resnet50_clip_avgpool \
