@@ -11,9 +11,9 @@
 #SBATCH --exclude=xaea-12
 #SBATCH --signal=USR1@100
 
-export GLOG_minloglevel=2
-export HABITAT_SIM_LOG=quiet
-export MAGNUM_LOG=quiet
+# export GLOG_minloglevel=2
+# export HABITAT_SIM_LOG=quiet
+# export MAGNUM_LOG=quiet
 
 MAIN_ADDR=$(scontrol show hostnames "${SLURM_JOB_NODELIST}" | head -n 1)
 export MAIN_ADDR
@@ -26,8 +26,8 @@ conda activate goat
 
 DATA_PATH="data/datasets/goat/v0.1.3"
 split="val_unseen_hard"
-eval_ckpt_path_dir="data/new_checkpoints/goat/ver/chain_individual_skills_croco/seed_1_ckpt_16/"
-tensorboard_dir="tb/goat/ver/chain_individual_skills_croco/seed_1_ckpt_16/${split}/"
+eval_ckpt_path_dir="data/new_checkpoints/goat/ver/chain_individual_skills_croco/seed_1_ckpt_39/"
+tensorboard_dir="tb/goat/ver/chain_individual_skills_croco/seed_1_ckpt_39/${split}/"
 
 
 # echo "Evaluating ckpt: ${eval_ckpt_path_dir}"
@@ -36,7 +36,7 @@ tensorboard_dir="tb/goat/ver/chain_individual_skills_croco/seed_1_ckpt_16/${spli
 srun python -um goat.run \
   --run-type eval \
   --exp-config config/experiments/ver_goat.yaml \
-  habitat_baselines.num_environments=24 \
+  habitat_baselines.num_environments=1 \
   habitat_baselines.trainer_name="goat_ppo" \
   habitat_baselines.rl.policy.name=GoatHighLevelPolicy \
   habitat_baselines.tensorboard_dir=$tensorboard_dir \
