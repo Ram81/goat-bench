@@ -7,6 +7,7 @@ import torch
 from gym import spaces
 from gym.spaces import Dict as SpaceDict
 from habitat.config import read_write
+from habitat.core.logging import logger
 from habitat.sims.habitat_simulator.actions import HabitatSimActions
 from habitat.tasks.nav.nav import EpisodicCompassSensor, EpisodicGPSSensor
 from habitat.tasks.nav.object_nav_task import ObjectGoalSensor
@@ -28,6 +29,7 @@ from goat.task.sensors import (
     ClipImageGoalSensor,
     ClipObjectGoalSensor,
     LanguageGoalSensor,
+    GoatInstanceImageGoalSensor,
 )
 
 
@@ -122,20 +124,11 @@ class GoatHighLevelPolicyNet(Net):
                 not in [
                     LanguageGoalSensor.cls_uuid,
                     CacheImageGoalSensor.cls_uuid,
+                    GoatInstanceImageGoalSensor.cls_uuid,
                 ]
             }
         )
-        # TODO: Find a better way to do this
-        # Set the config croco parameters to False explicitly!
-        original_params = {}
-        with read_write(config):
-            original_params['use_croco'] = config.habitat_baselines.rl.policy.use_croco
-            config.habitat_baselines.rl.policy.use_croco=False
-            original_params['croco_adapter'] = config.habitat_baselines.rl.policy.croco_adapter
-            config.habitat_baselines.rl.policy.croco_adapter=False
-            original_params['add_instance_linear_projection'] = config.habitat_baselines.rl.policy.add_instance_linear_projection
-            config.habitat_baselines.rl.policy.add_instance_linear_projection=False
-            
+
         self.ovon_policy = ovon_policy_cls.from_config(
             config,
             ovon_obs_space,
@@ -146,7 +139,8 @@ class GoatHighLevelPolicyNet(Net):
                 "/srv/flash1/rramrakhya3/spring_2023/ovon/data/new_checkpoints/ovon/ver/resnetclip_rgb_text/seed_1/ckpt.121.pth"
             )
         )
-        print("OVON missing keys: {}\n\n".format(missing_keys))
+
+        logger.info("OVON missing keys: {}\n\n".format(missing_keys))
 
         lnav_obs_space = spaces.Dict(
             {
@@ -156,6 +150,7 @@ class GoatHighLevelPolicyNet(Net):
                 not in [
                     ClipObjectGoalSensor.cls_uuid,
                     CacheImageGoalSensor.cls_uuid,
+                    GoatInstanceImageGoalSensor.cls_uuid,
                 ]
             }
         )
@@ -173,8 +168,8 @@ class GoatHighLevelPolicyNet(Net):
                 "/srv/flash1/rramrakhya3/fall_2023/goat/data/new_checkpoints/languagenav/ver/resnetclip_rgb_bert_text/seed_3/ckpt.18.pth"
             )
         )
-        print("Language nav missing keys: {}\n\n".format(missing_keys))
-
+        logger.info("Language nav missing keys: {}\n\n".format(missing_keys))
+        
         iinav_obs_space = spaces.Dict(
             {
                 k: v
@@ -189,11 +184,6 @@ class GoatHighLevelPolicyNet(Net):
         image_policy_cls = baseline_registry.get_policy(
             "PointNavResnetCLIPPolicy"
         )
-        
-        with read_write(config):
-            config.habitat_baselines.rl.policy.use_croco = original_params['use_croco']
-            config.habitat_baselines.rl.policy.croco_adapter = original_params['croco_adapter']
-            config.habitat_baselines.rl.policy.add_instance_linear_projection=original_params['add_instance_linear_projection']
         self.image_policy = image_policy_cls.from_config(
             config,
             iinav_obs_space,
@@ -202,11 +192,12 @@ class GoatHighLevelPolicyNet(Net):
         missing_keys = self.image_policy.load_state_dict(
             self.load_ckpt(
                 # "data/new_checkpoints/iin/ver/resnetclip_rgb_vc1_image/seed_1/ckpt.70.pth"
-                "/srv/flash1/gchhablani3/goat/data/new_checkpoints/iin/ver/resnetclip_rgb_croco_image/4_gpus/ckpt.28.pth"
+                "/srv/flash1/gchhablani3/goat/data/new_checkpoints/iin/ver/resnetclip_rgb_croco_image/4_gpus/ckpt.39.pth"
                 
             )
         )
-        print("IIN missing keys: {}".format(missing_keys))
+        logger.info("IIN missing keys: {}".format(missing_keys))
+
         print("Initialization of GOAT high level policy done.......")
 
         self.train()
@@ -261,6 +252,7 @@ class GoatHighLevelPolicyNet(Net):
                     not in [
                         CacheImageGoalSensor.cls_uuid,
                         LanguageGoalSensor.cls_uuid,
+                        GoatInstanceImageGoalSensor.cls_uuid,
                     ]
                 },
                 rnn_hidden_states,
@@ -289,6 +281,7 @@ class GoatHighLevelPolicyNet(Net):
                     not in [
                         CacheImageGoalSensor.cls_uuid,
                         ClipObjectGoalSensor.cls_uuid,
+                        GoatInstanceImageGoalSensor.cls_uuid,
                     ]
                 },
                 rnn_hidden_states,

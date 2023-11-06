@@ -910,52 +910,33 @@ class GoatInstanceImageGoalSensor(RGBSensor):
         **kwargs: Any,
     ) -> Optional[VisualObservation]:
 
-        episode_id = f"{episode.scene_id} {episode.episode_id}"
-        if self._current_episode_id != episode_id:
-            self._current_episode_id = episode_id
-
-            dummy_image = np.zeros((512, 512, 3), dtype=np.uint8)
-            if isinstance(episode, GoatEpisode):
-                if task.active_subtask_idx < len(episode.tasks):
-                    if episode.tasks[task.active_subtask_idx][1] == "image":
-                        current_task = episode.tasks[task.active_subtask_idx]
-                        instance_id = current_task[2]
-                        goal_image_id = current_task[-1]
-                        goal = [
-                            g for g in episode.goals[task.active_subtask_idx]
-                            if g["object_id"] == instance_id
-                        ]
-                        scene_id = episode.scene_id.split('/')[-1].split(".")[0]
-                        
-                        goal = [
-                            g
-                            for g in episode.goals[task.active_subtask_idx]
-                            if g["object_id"] == instance_id
-                        ]
-                        img_params = InstanceImageParameters(**goal[0]['image_goals'][goal_image_id])
-                        self._current_image_goal = self._get_instance_image_goal(img_params)
-                    else:
-                        self._current_image_goal = dummy_image
+        dummy_image = np.zeros((512, 512, 3), dtype=np.uint8)
+        if isinstance(episode, GoatEpisode):
+            if task.active_subtask_idx < len(episode.tasks):
+                if episode.tasks[task.active_subtask_idx][1] == "image":
+                    current_task = episode.tasks[task.active_subtask_idx]
+                    instance_id = current_task[2]
+                    goal_image_id = current_task[-1]
+                    goal = [
+                        g for g in episode.goals[task.active_subtask_idx]
+                        if g["object_id"] == instance_id
+                    ]
+                    scene_id = episode.scene_id.split('/')[-1].split(".")[0]
+                    
+                    goal = [
+                        g
+                        for g in episode.goals[task.active_subtask_idx]
+                        if g["object_id"] == instance_id
+                    ]
+                    img_params = InstanceImageParameters(**goal[0]['image_goals'][goal_image_id])
+                    self._current_image_goal = self._get_instance_image_goal(img_params)
                 else:
                     self._current_image_goal = dummy_image
             else:
-                if len(episode.goals) == 0:
-                    logger.error(
-                        f"No goal specified for episode {episode.episode_id}."
-                    )
-                    return None
-                if not isinstance(episode.goals[0], InstanceImageGoal):
-                    logger.error(
-                        f"First goal should be InstanceImageGoal, episode {episode.episode_id}."
-                    )
-                    return None
+                self._current_image_goal = dummy_image
+        else:
 
-                episode_uniq_id = f"{episode.scene_id} {episode.episode_id}"
-                if episode_uniq_id == self._current_episode_id:
-                    return self._current_image_goal
-
-                img_params = episode.goals[0].image_goals[episode.goal_image_id]
-                self._current_image_goal = self._get_instance_image_goal(img_params)
-                self._current_episode_id = episode_uniq_id
+            img_params = episode.goals[0].image_goals[episode.goal_image_id]
+            self._current_image_goal = self._get_instance_image_goal(img_params)
 
         return self._current_image_goal
