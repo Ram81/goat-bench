@@ -2,12 +2,12 @@
 #SBATCH --job-name=goat
 #SBATCH --output=slurm_logs/goat-ver-%j.out
 #SBATCH --error=slurm_logs/goat-ver-%j.err
-#SBATCH --gpus 1
+#SBATCH --gpus 4
 #SBATCH --nodes 1
-#SBATCH --cpus-per-task 10
-#SBATCH --ntasks-per-node 1
+#SBATCH --cpus-per-task 6
+#SBATCH --ntasks-per-node 4
 #SBATCH --constraint=a40
-#SBATCH --exclude=megabot,gundam,kitt,cheetah
+#SBATCH --exclude=gundam,voltron,perseverance
 #SBATCH --partition=short
 #SBATCH --signal=USR1@100
 #SBATCH --requeue
@@ -26,8 +26,8 @@ conda activate goat
 export PYTHONPATH=/srv/flash1/rramrakhya3/fall_2023/habitat-sim/src_python/
 export HOME=/srv/flash1/rramrakhya3/summer_2023
 
-TENSORBOARD_DIR="tb/languagenav/ver/resnetclip_rgb_text/seed_1/"
-CHECKPOINT_DIR="data/new_checkpoints/languagenav/ver/resnetclip_rgb_text/seed_1/"
+TENSORBOARD_DIR="tb/languagenav/ver/resnetclip_rgb_clip_text/seed_1/"
+CHECKPOINT_DIR="data/new_checkpoints/languagenav/ver/resnetclip_rgb_clip_text/seed_1/"
 DATA_PATH="data/datasets/languagenav/hm3d/v5_final/"
 
 srun python -um goat.run \
@@ -43,9 +43,9 @@ srun python -um goat.run \
   habitat.dataset.data_path=${DATA_PATH}/train/train.json.gz \
   +habitat/task/lab_sensors@habitat.task.lab_sensors.language_goal_sensor=language_goal_sensor \
   ~habitat.task.lab_sensors.objectgoal_sensor \
-  habitat.task.lab_sensors.language_goal_sensor.cache=data/clip_embeddings/goat/language_nav_train_bert.pkl \
+  habitat.task.lab_sensors.language_goal_sensor.cache=data/datasets/languagenav/hm3d/v5_final/train_embeddings/clip_train_embeddings.pkl \
+  habitat.task.lab_sensors.language_goal_sensor.embedding_dim=1024 \
   habitat.task.measurements.success.success_distance=0.25 \
-  habitat.simulator.type="GOATSim-v0" \
   habitat.dataset.type="LanguageNav-v1" \
+  habitat.simulator.type="OVONSim-v0" \
   habitat_baselines.rl.ddppo.distrib_backend="GLOO"
-
