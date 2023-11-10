@@ -9,7 +9,7 @@ defaults:
 habitat:
   env_task: GymGoatEnv
   environment:
-    max_episode_steps: 2500
+    max_episode_steps: 5000
 
   task:
     type: Goat-v1

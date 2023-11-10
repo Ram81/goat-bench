@@ -13,7 +13,7 @@ from goat.utils.utils import (
 
 def validate_goat(path):
     files = glob.glob(os.path.join(path, "*.json.gz"))
-    total = 0
+
     categories = defaultdict(int)
     iin_instances = 0
     lang_instances = 0
@@ -30,8 +30,11 @@ def validate_goat(path):
                     iin_instances += 1
 
     print("Categories: {}".format(categories))
-    print("L: {}, I:{}".format(iin_instances, lang_instances))
-    print("L: {}".format(len(categories)))
+    print(
+        "IIN instances: {}, LanguageNav instances:{}".format(
+            iin_instances, lang_instances
+        )
+    )
 
 
 if __name__ == "__main__":

@@ -1,3 +1,4 @@
+import copy
 import os
 from collections import defaultdict, deque
 from typing import TYPE_CHECKING, Any, Dict, List, Optional
@@ -26,6 +27,8 @@ from habitat_baselines.utils.common import (
     is_continuous_action_space,
 )
 from omegaconf import OmegaConf
+
+from goat.utils.utils import write_json
 
 if TYPE_CHECKING:
     from omegaconf import DictConfig
@@ -152,6 +155,9 @@ class GoatPPOTrainer(PPOTrainer):
         rgb_frames = [
             [] for _ in range(self.config.habitat_baselines.num_environments)
         ]  # type: List[List[np.ndarray]]
+        saved_actions = [
+            [] for _ in range(self.config.habitat_baselines.num_environments)
+        ]  # type: List[List[np.ndarray]]
         if len(self.config.habitat_baselines.eval.video_option) > 0:
             os.makedirs(self.config.habitat_baselines.video_dir, exist_ok=True)
 
@@ -179,6 +185,8 @@ class GoatPPOTrainer(PPOTrainer):
 
         pbar = tqdm.tqdm(total=number_of_eval_episodes * evals_per_ep)
         self.actor_critic.eval()
+
+        episode_metrics = []
         while (
             len(stats_episodes) < (number_of_eval_episodes * evals_per_ep)
             and self.envs.num_envs > 0
@@ -267,6 +275,8 @@ class GoatPPOTrainer(PPOTrainer):
                 ):
                     envs_to_pause.append(i)
 
+                saved_actions[i].append(prev_actions[i].item())
+
                 if len(self.config.habitat_baselines.eval.video_option) > 0:
                     # TODO move normalization / channel changing out of the policy and undo it here
                     frame = observations_to_image(
@@ -297,6 +307,26 @@ class GoatPPOTrainer(PPOTrainer):
                     # use scene_id + episode_id as unique id for storing stats
                     stats_episodes[(k, ep_eval_count[k])] = episode_stats
 
+                    episode_state_copy = copy.deepcopy(episode_stats)
+                    episode_state_copy["scene_id"] = current_episodes_info[
+                        i
+                    ].scene_id
+                    episode_state_copy["episode_id"] = current_episodes_info[
+                        i
+                    ].episode_id
+                    episode_state_copy["subtasks"] = current_episodes_info[
+                        i
+                    ].tasks
+                    episode_state_copy["success_by_subtask"] = infos[i][
+                        "success.subtask_success"
+                    ]
+                    episode_state_copy["spl_by_subtaskl"] = infos[i][
+                        "spl.spl_by_subtask"
+                    ]
+                    print("episode_state_copy", current_episodes_info[i].tasks)
+                    episode_state_copy["actions"] = saved_actions[i]
+                    episode_metrics.append(episode_state_copy)
+
                     if len(self.config.habitat_baselines.eval.video_option) > 0:
                         generate_video(
                             video_option=self.config.habitat_baselines.eval.video_option,
@@ -311,6 +341,7 @@ class GoatPPOTrainer(PPOTrainer):
                         )
 
                         rgb_frames[i] = []
+                        saved_actions[i] = []
 
                     gfx_str = infos[i].get(GfxReplayMeasure.cls_uuid, "")
                     if gfx_str != "":
@@ -365,5 +396,13 @@ class GoatPPOTrainer(PPOTrainer):
         metrics = {k: v for k, v in aggregated_stats.items() if k != "reward"}
         for k, v in metrics.items():
             writer.add_scalar(f"eval_metrics/{k}", v, step_id)
+
+        write_json(
+            episode_metrics,
+            os.path.join(
+                self.config.habitat_baselines.tensorboard_dir,
+                "episode_metrics.json",
+            ),
+        )
 
         self.envs.close()

@@ -5,7 +5,7 @@ ckpt_interval=$2
 ckpt_dir=$3
 tb_dir=$4
 
-count=54
+count=50
 num_ckpt_files=`ls ${ckpt_dir}/*.pth | wc -l`
 
 echo "Num ckpt files: $num_ckpt_files, Interval: $ckpt_interval"
