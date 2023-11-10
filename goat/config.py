@@ -80,6 +80,7 @@ class ClipImageGoalSensorConfig(LabSensorConfig):
 class CacheImageGoalSensorConfig(LabSensorConfig):
     type: str = "CacheImageGoalSensor"
     cache: str = "data/"
+    image_cache_encoder: str = ""
 
 
 @dataclass
@@ -116,6 +117,7 @@ class CurrentEpisodeUUIDSensorConfig(LabSensorConfig):
 class LanguageGoalSensorConfig(LabSensorConfig):
     type: str = "LanguageGoalSensor"
     cache: str = "data/clip_embeddings/goat/language_nav_train_bert.pkl"
+    embedding_dim: int = 768
 
 
 @dataclass

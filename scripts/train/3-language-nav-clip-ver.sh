@@ -2,12 +2,12 @@
 #SBATCH --job-name=goat
 #SBATCH --output=slurm_logs/goat-ver-%j.out
 #SBATCH --error=slurm_logs/goat-ver-%j.err
-#SBATCH --gpus 1
+#SBATCH --gpus 4
 #SBATCH --nodes 1
-#SBATCH --cpus-per-task 10
-#SBATCH --ntasks-per-node 1
+#SBATCH --cpus-per-task 6
+#SBATCH --ntasks-per-node 4
 #SBATCH --constraint=a40
-#SBATCH --exclude=megabot,gundam,cheetah
+#SBATCH --exclude=gundam,voltron,perseverance
 #SBATCH --partition=short
 #SBATCH --signal=USR1@100
 #SBATCH --requeue
@@ -26,15 +26,15 @@ conda activate goat
 export PYTHONPATH=/srv/flash1/rramrakhya3/fall_2023/habitat-sim/src_python/
 export HOME=/srv/flash1/rramrakhya3/summer_2023
 
-TENSORBOARD_DIR="tb/languagenav/ver/resnetclip_rgb_clip_text/seed_debug/"
-CHECKPOINT_DIR="data/new_checkpoints/languagenav/ver/resnetclip_rgb_clip_text/seed_debug/"
+TENSORBOARD_DIR="tb/languagenav/ver/resnetclip_rgb_clip_text/seed_1/"
+CHECKPOINT_DIR="data/new_checkpoints/languagenav/ver/resnetclip_rgb_clip_text/seed_1/"
 DATA_PATH="data/datasets/languagenav/hm3d/v5_final/"
 
 srun python -um goat.run \
   --run-type train \
   --exp-config config/experiments/ver_language_nav.yaml \
   habitat_baselines.trainer_name="ver" \
-  habitat_baselines.num_environments=2 \
+  habitat_baselines.num_environments=32 \
   habitat_baselines.rl.policy.name=PointNavResnetCLIPPolicy \
   habitat_baselines.rl.ddppo.train_encoder=False \
   habitat_baselines.rl.ddppo.backbone=resnet50_clip_avgpool \
