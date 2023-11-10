@@ -182,8 +182,12 @@ class GoatDistanceToGoal(Measure):
             }
             return
 
-        if self._previous_position is None or not np.allclose(
-            self._previous_position, current_position, atol=1e-4
+        if (
+            self._previous_position is None
+            or not np.allclose(
+                self._previous_position, current_position, atol=1e-4
+            )
+            or True
         ):
             if self._config.distance_to == "VIEW_POINTS":
                 viewpoints = [
@@ -216,8 +220,11 @@ class GoatDistanceToGoal(Measure):
             print(
                 current_position,
                 self._previous_position,
+                self._current_subtask_idx,
                 task.last_action,
                 episode.tasks[task.active_subtask_idx],
+                episode.scene_id,
+                episode.episode_id,
                 self._metric,
             )
 
@@ -343,6 +350,7 @@ class GoatSPL(Measure):
 
         self._spl_by_subtasks = defaultdict(int)
         self._subtask_counts = defaultdict(int)
+        self._subtask_spl = [0] * len(episode.tasks)
 
         for t in episode.tasks:
             self._subtask_counts[t[1]] += 1
@@ -380,6 +388,7 @@ class GoatSPL(Measure):
             self._spl_by_subtasks[
                 episode.tasks[self._current_subtask_idx][1]
             ] += spl
+            self._subtask_spl[self._current_subtask_idx] = spl
 
         spl_by_subtask = {}
         for k, v in self._subtask_counts.items():
@@ -391,6 +400,7 @@ class GoatSPL(Measure):
             "composite_spl": sum(self._spl_by_subtasks.values())
             / sum(self._subtask_counts.values()),
             # **spl_by_subtask,
+            "spl_by_subtask": self._subtask_spl,
         }
 
         if self._current_subtask_idx != task.active_subtask_idx:

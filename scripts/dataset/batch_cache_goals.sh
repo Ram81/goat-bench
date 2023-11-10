@@ -18,7 +18,7 @@ do
   base=${scene_id%.*}  # remove .gz
   base=${base%.*}  # remove .json
 
-  if [ -f "${output_path}/${base}_${encoder}_goat_embedding.pkl" ]; then
+  if [ -f "${output_path}/${base}_${encoder}_iin_embedding.pkl" ]; then
     echo "Skipping ${base}"
     continue
   fi
