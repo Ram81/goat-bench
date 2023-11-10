@@ -55,7 +55,7 @@ class CacheGoals:
         if os.path.exists(
             os.path.join(
                 self.output_path,
-                f"{scene}_{self.encoder_name}_goat_embedding.pkl",
+                f"{scene}_{self.encoder_name}_iin_embedding.pkl",
             )
         ):
             print("Scene already cached: {}".format(scene))
@@ -92,13 +92,15 @@ class CacheGoals:
             data[f"{goal_k}"] = goals_meta
             data_goal[f"{scene_id}_{goal_val.object_name}"] = goals_meta
 
-        # out_path = os.path.join(self.output_path, f"{scene}_clip_embedding.pkl")
-        # save_pickle(data, out_path)
-
         out_path = os.path.join(
-            self.output_path, f"{scene}_{self.encoder_name}_goat_embedding.pkl"
+            self.output_path, f"{scene}_{self.encoder_name}_iin_embedding.pkl"
         )
-        save_pickle(data_goal, out_path)
+        save_pickle(data, out_path)
+
+        # out_path = os.path.join(
+        #     self.output_path, f"{scene}_{self.encoder_name}_goat_embedding.pkl"
+        # )
+        # save_pickle(data_goal, out_path)
 
 
 if __name__ == "__main__":
