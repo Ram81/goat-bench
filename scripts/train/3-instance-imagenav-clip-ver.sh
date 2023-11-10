@@ -2,10 +2,10 @@
 #SBATCH --job-name=goat
 #SBATCH --output=slurm_logs/goat-ver-%j.out
 #SBATCH --error=slurm_logs/goat-ver-%j.err
-#SBATCH --gpus 1
+#SBATCH --gpus 4
 #SBATCH --nodes 1
 #SBATCH --cpus-per-task 10
-#SBATCH --ntasks-per-node 1
+#SBATCH --ntasks-per-node 4
 #SBATCH --constraint=a40
 #SBATCH --exclude=megabot,gundam,kitt,cheetah
 #SBATCH --partition=short
@@ -46,5 +46,5 @@ srun python -um goat.run \
   habitat.task.lab_sensors.cache_instance_imagegoal_sensor.cache=data/datasets/iin/hm3d/v2/train_goal_embeddings/ \
   habitat.task.lab_sensors.cache_instance_imagegoal_sensor.image_cache_encoder="CLIP" \
   habitat.task.measurements.success.success_distance=0.25 \
-  habitat.simulator.type="GOATSim-v0" \
+  habitat.simulator.type="OVONSim-v0" \
   habitat_baselines.rl.ddppo.distrib_backend="GLOO"

@@ -12,22 +12,16 @@ from habitat_baselines.common.baseline_registry import baseline_registry
 from habitat_baselines.rl.ddppo.policy import PointNavResNetNet
 from habitat_baselines.rl.ddppo.policy.resnet import resnet18
 from habitat_baselines.rl.ddppo.policy.resnet_policy import ResNetEncoder
-from habitat_baselines.rl.models.rnn_state_encoder import (
-    build_rnn_state_encoder,
-)
+from habitat_baselines.rl.models.rnn_state_encoder import \
+    build_rnn_state_encoder
 from habitat_baselines.rl.ppo import Net, NetPolicy
 from habitat_baselines.utils.common import get_num_actions
 from torch import nn as nn
 from torchvision import transforms as T
 
-from goat.task.sensors import (
-    CacheImageGoalSensor,
-    ClipGoalSelectorSensor,
-    ClipImageGoalSensor,
-    ClipObjectGoalSensor,
-    GoatGoalSensor,
-    LanguageGoalSensor,
-)
+from goat.task.sensors import (CacheImageGoalSensor, ClipGoalSelectorSensor,
+                               ClipImageGoalSensor, ClipObjectGoalSensor,
+                               GoatGoalSensor, LanguageGoalSensor)
 
 
 @baseline_registry.register_policy(name="PointNavResnetCLIPPolicy")
@@ -271,7 +265,9 @@ class PointNavResNetCLIPNet(Net):
             )
         )
         if LanguageGoalSensor.cls_uuid in observation_space.spaces:
-            embedding_dim = 768
+            embedding_dim = int(observation_space.spaces[
+                LanguageGoalSensor.cls_uuid
+            ].shape[0])
             print(
                 f"Language embedding: {embedding_dim}, "
                 f"Add Language linear: {add_language_linear_projection}"

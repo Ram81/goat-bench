@@ -127,6 +127,22 @@ class LanguageNavDatasetV1(PointNavDatasetV1):
 
             episode.goals = self.goals_by_instance[episode.goals_key]
 
+            uuid = episode.instructions[0].lower()
+            first_3_words = [
+                "prefix: instruction: go",
+                "instruction: find the",
+                "instruction: go to",
+                "api_failure",
+                "instruction: locate the",
+            ]
+            for prefix in first_3_words:
+                uuid = uuid.replace(prefix, "")
+                uuid = uuid.replace("\n", " ")
+            uuid = uuid.strip()
+
+            if len(uuid.split(" ")) > 55 or len(uuid) == 0:
+                continue
+
             if episode.shortest_paths is not None:
                 for path in episode.shortest_paths:
                     for p_index, point in enumerate(path):

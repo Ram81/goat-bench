@@ -356,6 +356,7 @@ class LanguageGoalSensor(Sensor):
         **kwargs: Any,
     ):
         self.cache = load_pickle(config.cache)
+        self.embedding_dim = config.embedding_dim
         super().__init__(config=config)
 
     def _get_uuid(self, *args: Any, **kwargs: Any) -> str:
@@ -366,7 +367,10 @@ class LanguageGoalSensor(Sensor):
 
     def _get_observation_space(self, *args: Any, **kwargs: Any):
         return spaces.Box(
-            low=-np.inf, high=np.inf, shape=(768,), dtype=np.float32
+            low=-np.inf,
+            high=np.inf,
+            shape=(self.embedding_dim,),
+            dtype=np.float32,
         )
 
     def get_observation(
@@ -378,7 +382,7 @@ class LanguageGoalSensor(Sensor):
         **kwargs: Any,
     ) -> Optional[int]:
         uuid = ""
-        dummy_embedding = np.zeros((768,), dtype=np.float32)
+        dummy_embedding = np.zeros((self.embedding_dim,), dtype=np.float32)
         if isinstance(episode, GoatEpisode):
             # print(
             #     "Lang GoatEpisode: {} - {}".format(
@@ -448,6 +452,7 @@ class CacheImageGoalSensor(Sensor):
         **kwargs: Any,
     ):
         self.cache_base_dir = config.cache
+        self.image_encoder = config.image_cache_encoder
         self.cache = None
         self._current_scene_id = ""
         self._current_episode_id = ""
@@ -479,9 +484,16 @@ class CacheImageGoalSensor(Sensor):
             scene_id = episode.scene_id.split("/")[-1].split(".")[0]
 
             suffix = "embedding.pkl"
+            if self.image_encoder != "":
+                suffix = "{}_iin_{}".format(self.image_encoder, suffix)
             if isinstance(episode, GoatEpisode):
                 suffix = "goat_{}".format(suffix)
 
+            print(
+                "Cache dir: {}".format(
+                    os.path.join(self.cache_base_dir, f"{scene_id}_{suffix}")
+                )
+            )
             self.cache = load_pickle(
                 os.path.join(self.cache_base_dir, f"{scene_id}_{suffix}")
             )

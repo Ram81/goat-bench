@@ -25,9 +25,9 @@ conda activate goat
 
 export PYTHONPATH=/srv/flash1/rramrakhya3/fall_2023/habitat-sim/src_python/
 
-TENSORBOARD_DIR="tb/goat/ver/resnetclip_rgb_multimodal/seed_1/"
-CHECKPOINT_DIR="data/new_checkpoints/goat/ver/resnetclip_rgb_multimodal/seed_1/"
-DATA_PATH="data/datasets/goat/v0.1.3/"
+TENSORBOARD_DIR="tb/goat/ver/resnetclip_rgb_multimodal/seed_1_v0.1.4/"
+CHECKPOINT_DIR="data/new_checkpoints/goat/ver/resnetclip_rgb_multimodal/seed_1_v0.1.4/"
+DATA_PATH="data/datasets/goat/v0.1.4/"
 
 srun python -um goat.run \
   --run-type train \
