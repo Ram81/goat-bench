@@ -68,29 +68,32 @@ class ClipObjectGoalSensor(Sensor):
         **kwargs: Any,
     ) -> Optional[int]:
         dummy_embedding = np.zeros((1024,), dtype=np.float32)
-        if isinstance(episode, GoatEpisode):
-            # print(
-            #     "GoatEpisode: {} - {}".format(
-            #         episode.tasks[task.active_subtask_idx],
-            #         isinstance(episode, GoatEpisode),
-            #     )
-            # )
-            if task.active_subtask_idx < len(episode.tasks):
-                if episode.tasks[task.active_subtask_idx][1] == "object":
-                    category = episode.tasks[task.active_subtask_idx][0]
+        try:
+            if isinstance(episode, GoatEpisode):
+                # print(
+                #     "GoatEpisode: {} - {}".format(
+                #         episode.tasks[task.active_subtask_idx],
+                #         isinstance(episode, GoatEpisode),
+                #     )
+                # )
+                if task.active_subtask_idx < len(episode.tasks):
+                    if episode.tasks[task.active_subtask_idx][1] == "object":
+                        category = episode.tasks[task.active_subtask_idx][0]
+                    else:
+                        return dummy_embedding
                 else:
                     return dummy_embedding
             else:
-                return dummy_embedding
-        else:
-            category = (
-                episode.object_category
-                if hasattr(episode, "object_category")
-                else ""
-            )
-        if category not in self.cache:
-            print("ObjectGoal Missing category: {}".format(category))
-        # print("ObjectGoal Found category: {}".format(category))
+                category = (
+                    episode.object_category
+                    if hasattr(episode, "object_category")
+                    else ""
+                )
+            if category not in self.cache:
+                print("ObjectGoal Missing category: {}".format(category))
+            # print("ObjectGoal Found category: {}".format(category))
+        except Exception as e:
+            print("Object goal exception ", e)
         return self.cache[category]
 
 
@@ -382,52 +385,59 @@ class LanguageGoalSensor(Sensor):
         **kwargs: Any,
     ) -> Optional[int]:
         uuid = ""
-        dummy_embedding = np.zeros((self.embedding_dim,), dtype=np.float32)
-        if isinstance(episode, GoatEpisode):
-            # print(
-            #     "Lang GoatEpisode: {} - {}".format(
-            #         episode.tasks[task.active_subtask_idx],
-            #         isinstance(episode, GoatEpisode),
-            #     )
-            # )
-            if task.active_subtask_idx < len(episode.tasks):
-                if episode.tasks[task.active_subtask_idx][1] == "description":
-                    # print("not retur lang")
-                    instance_id = episode.tasks[task.active_subtask_idx][2]
-                    # print("instance id", instance_id)
-                    # print(
-                    #     "episode goals",
-                    #     [
-                    #         list(g.keys())
-                    #         for g in episode.goals[task.active_subtask_idx]
-                    #     ],
-                    # )
-                    goal = [
-                        g
-                        for g in episode.goals[task.active_subtask_idx]
-                        if g["object_id"] == instance_id
-                    ]
-                    uuid = goal[0]["lang_desc"].lower()
+
+        try:
+            dummy_embedding = np.zeros((self.embedding_dim,), dtype=np.float32)
+            if isinstance(episode, GoatEpisode):
+                # print(
+                #     "Lang GoatEpisode: {} - {}".format(
+                #         episode.tasks[task.active_subtask_idx],
+                #         isinstance(episode, GoatEpisode),
+                #     )
+                # )
+                if task.active_subtask_idx < len(episode.tasks):
+                    if (
+                        episode.tasks[task.active_subtask_idx][1]
+                        == "description"
+                    ):
+                        # print("not retur lang")
+                        instance_id = episode.tasks[task.active_subtask_idx][2]
+                        # print("instance id", instance_id)
+                        # print(
+                        #     "episode goals",
+                        #     [
+                        #         list(g.keys())
+                        #         for g in episode.goals[task.active_subtask_idx]
+                        #     ],
+                        # )
+                        goal = [
+                            g
+                            for g in episode.goals[task.active_subtask_idx]
+                            if g["object_id"] == instance_id
+                        ]
+                        uuid = goal[0]["lang_desc"].lower()
+                    else:
+                        return dummy_embedding
                 else:
                     return dummy_embedding
             else:
-                return dummy_embedding
-        else:
-            uuid = episode.instructions[0].lower()
-            first_3_words = [
-                "prefix: instruction: go",
-                "instruction: find the",
-                "instruction: go to",
-                "api_failure",
-                "instruction: locate the",
-            ]
-            for prefix in first_3_words:
-                uuid = uuid.replace(prefix, "")
-                uuid = uuid.replace("\n", " ")
-            uuid = uuid.strip()
+                uuid = episode.instructions[0].lower()
+                first_3_words = [
+                    "prefix: instruction: go",
+                    "instruction: find the",
+                    "instruction: go to",
+                    "api_failure",
+                    "instruction: locate the",
+                ]
+                for prefix in first_3_words:
+                    uuid = uuid.replace(prefix, "")
+                    uuid = uuid.replace("\n", " ")
+                uuid = uuid.strip()
 
-        if self.cache.get(uuid) is None:
-            print("Lang Missing category: {}".format(uuid))
+            if self.cache.get(uuid) is None:
+                print("Lang Missing category: {}".format(uuid))
+        except Exception as e:
+            print("Language goal exception ", e)
         return self.cache[uuid]
 
 
@@ -487,7 +497,7 @@ class CacheImageGoalSensor(Sensor):
             if self.image_encoder != "":
                 suffix = "{}_iin_{}".format(self.image_encoder, suffix)
             if isinstance(episode, GoatEpisode):
-                suffix = "goat_{}".format(suffix)
+                suffix = suffix.replace("iin", "goat")
 
             print(
                 "Cache dir: {}".format(
@@ -498,30 +508,38 @@ class CacheImageGoalSensor(Sensor):
                 os.path.join(self.cache_base_dir, f"{scene_id}_{suffix}")
             )
 
-        if self._current_episode_id != episode_id:
-            self._current_episode_id = episode_id
+        try:
+            if self._current_episode_id != episode_id:
+                self._current_episode_id = episode_id
 
-            dummy_embedding = np.zeros((1024,), dtype=np.float32)
-            if isinstance(episode, GoatEpisode):
-                if task.active_subtask_idx < len(episode.tasks):
-                    if episode.tasks[task.active_subtask_idx][1] == "image":
-                        instance_id = episode.tasks[task.active_subtask_idx][2]
-                        curent_task = episode.tasks[task.active_subtask_idx]
-                        scene_id = episode.scene_id.split("/")[-1].split(".")[0]
+                dummy_embedding = np.zeros((1024,), dtype=np.float32)
+                if isinstance(episode, GoatEpisode):
+                    if task.active_subtask_idx < len(episode.tasks):
+                        if episode.tasks[task.active_subtask_idx][1] == "image":
+                            instance_id = episode.tasks[
+                                task.active_subtask_idx
+                            ][2]
+                            curent_task = episode.tasks[task.active_subtask_idx]
+                            scene_id = episode.scene_id.split("/")[-1].split(
+                                "."
+                            )[0]
 
-                        uuid = "{}_{}".format(scene_id, instance_id)
+                            uuid = "{}_{}".format(scene_id, instance_id)
 
-                        self._current_episode_image_goal = self.cache[
-                            "{}_{}".format(scene_id, instance_id)
-                        ][curent_task[-1]]["embedding"]
+                            self._current_episode_image_goal = self.cache[
+                                "{}_{}".format(scene_id, instance_id)
+                            ][curent_task[-1]]["embedding"]
+                        else:
+                            self._current_episode_image_goal = dummy_embedding
                     else:
                         self._current_episode_image_goal = dummy_embedding
                 else:
-                    self._current_episode_image_goal = dummy_embedding
-            else:
-                self._current_episode_image_goal = self.cache[episode.goal_key][
-                    episode.goal_image_id
-                ]["embedding"]
+                    self._current_episode_image_goal = self.cache[
+                        episode.goal_key
+                    ][episode.goal_image_id]["embedding"]
+        except Exception as e:
+            print("Image goal exception ", e)
+            raise e
 
         return self._current_episode_image_goal
 

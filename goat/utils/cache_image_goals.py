@@ -2,6 +2,7 @@ import argparse
 import glob
 import json
 import os
+import random
 
 import habitat
 import numpy as np
@@ -22,6 +23,7 @@ class CacheGoals:
         split: str = "train",
         output_path: str = "",
         encoder: str = "VC-1",
+        add_noise: bool = False,
     ) -> None:
         self.device = torch.device("cuda")
 
@@ -31,14 +33,23 @@ class CacheGoals:
         self.split = split
         self.init_visual_encoder(encoder)
         self.encoder_name = encoder
+        self.add_noise = add_noise
 
     def init_visual_encoder(self, encoder):
-        if encoder == "VC-1":
+        if "VC-1" in encoder:
             self.encoder = VC1Encoder(device=self.device)
-        elif encoder == "CLIP":
+        elif "CLIP" in encoder:
             self.encoder = CLIPEncoder(device=self.device)
         else:
             raise NotImplementedError
+
+    def apply_noise(self, image):
+        mean = 0
+        std = random.uniform(0.1, 2.0)
+        image = image + np.random.normal(
+            loc=mean, scale=std, size=image.shape
+        ).astype(np.float32)
+        return image.astype(np.uint8)
 
     def config_env(self, scene):
         config = get_config(self.config_path)
@@ -70,12 +81,17 @@ class CacheGoals:
         print("Scene reset: {}".format(scene))
         os.makedirs(self.output_path, exist_ok=True)
 
+        print("Add noise: {}".format(self.add_noise))
+
         for goal_k, goal_val in goals.items():
             goals_meta = []
             for goal_idx, img_goal in enumerate(goal_val.image_goals):
                 img = env.task.sensor_suite.sensors[
                     "instance_imagegoal"
                 ]._get_instance_image_goal(img_goal)
+
+                if self.add_noise:
+                    img = self.apply_noise(img)
 
                 vc1_embedding = self.encoder.embed_vision(img)
                 metadata = dict(
@@ -97,10 +113,10 @@ class CacheGoals:
         )
         save_pickle(data, out_path)
 
-        # out_path = os.path.join(
-        #     self.output_path, f"{scene}_{self.encoder_name}_goat_embedding.pkl"
-        # )
-        # save_pickle(data_goal, out_path)
+        out_path = os.path.join(
+            self.output_path, f"{scene}_{self.encoder_name}_goat_embedding.pkl"
+        )
+        save_pickle(data_goal, out_path)
 
 
 if __name__ == "__main__":
@@ -135,6 +151,11 @@ if __name__ == "__main__":
         type=str,
         default="VC-1",
     )
+    parser.add_argument(
+        "--add-noise",
+        action="store_true",
+        dest="add_noise",
+    )
     args = parser.parse_args()
 
     cache = CacheGoals(
@@ -143,5 +164,6 @@ if __name__ == "__main__":
         split=args.split,
         output_path=args.output_path,
         encoder=args.encoder,
+        add_noise=args.add_noise,
     )
     cache.run(args.scene)

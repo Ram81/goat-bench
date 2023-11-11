@@ -164,8 +164,10 @@ def validate_goat(path, embeddings_path):
 
     files = glob.glob(os.path.join(path, "*.json.gz"))
     total = 0
+    available = 0
     insts = []
     missing = []
+    failures = []
     scene_ids = []
     for file in files:
         dataset = load_dataset(file)
@@ -178,21 +180,26 @@ def validate_goat(path, embeddings_path):
                     insts.append(instruction)
 
                     if "failure" in instruction or len(instruction) == 0:
-                        missing.append(instruction)
+                        failures.append(instruction)
                         scene_ids.append(file.split("/")[-1].split(".")[0])
 
                     if embeddings.get(instruction) is None:
                         missing.append(instruction)
                         scene_ids.append(file.split("/")[-1].split(".")[0])
                     else:
-                        total += 1
+                        available += 1
+                    total += 1
                 if goal.get("image_goals") is None:
                     continue
                 # if embeddings.get(f"{sceme_id}_{goal['object_id']}") is None:
                 #     missing.append(goal["object_id"])
 
-    print("Missin instructions: {}/{}".format(len(missing), total))
-    print("missing: {}, {}".format(set(missing), set(scene_ids)))
+    print(
+        "Missin instructions: {} - {} - {}, Failure: {}".format(
+            len(missing), available, total, len(failures)
+        )
+    )
+    # print("missing: {}, {}".format(set(missing), set(scene_ids)))
     print(embeddings.get(""), insts[:2])
 
 
