@@ -1,6 +1,7 @@
 import argparse
 import glob
 import os
+import random
 from typing import List
 
 import clip
@@ -9,7 +10,7 @@ import torch
 from tqdm import tqdm
 from transformers import BertConfig, BertModel, BertTokenizer
 
-from goat.utils.utils import load_dataset, save_pickle
+from goat.utils.utils import load_dataset, load_json, save_pickle
 
 PROMPT = "{category}"
 
@@ -223,8 +224,95 @@ def cache_goat_goals(dataset_path, output_path, model):
     cache_embeddings(list(instructions), output_path, model)
 
 
-def main(dataset_path, output_path, dataset, model):
-    if dataset == "ovon":
+def cache_noisy_language_goals(json_path, output_path, model_name):
+    instructions = set()
+    first_3_words = set()
+
+    filtered_goals = 0
+    language_goals = load_json(json_path)
+    goal_keys = []
+    for key, val in language_goals.items():
+        goal_keys.append(key.lower())
+        cleaned_instruction = clean_instruction(val.lower())
+
+        if len(cleaned_instruction.split(" ")) > 55:
+            filtered_goals += 1
+            continue
+
+        instructions.add(cleaned_instruction)
+        first_3_words.add(" ".join(val.lower().split(" ")[:3]))
+
+    print(
+        "Total instructions: {}, Filtered: {}".format(
+            len(instructions), filtered_goals
+        )
+    )
+    max_instruction_len = 0
+    for instruction in instructions:
+        max_instruction_len = max(
+            max_instruction_len, len(instruction.split(" "))
+        )
+    print("Max instruction length: {}".format(max_instruction_len))
+    print("First 3 words: {}".format(first_3_words))
+    os.makedirs(os.path.dirname(output_path), exist_ok=True)
+
+    if model_name == "BERT":
+        model = get_bert()
+        text_embedding = model.batch_embed(list(instructions))
+    else:
+        model, _ = clip.load(model_name)
+        batch = tokenize_and_batch(clip, list(instructions))
+
+        with torch.no_grad():
+            print(batch.shape)
+            text_embedding = model.encode_text(batch.flatten(0, 1)).float()
+    print(
+        "Noisey Goals: {}, Embeddings: {}, Shape: {}".format(
+            len(goal_keys), len(text_embedding), text_embedding[0].shape
+        )
+    )
+    save_to_disk(text_embedding, goal_keys, output_path)
+
+
+def cache_noisy_ovon_goals(json_path, output_path, model_name):
+    categories = set()
+
+    filtered_goals = 0
+    ovon_goals = load_json(json_path)
+    goal_keys = []
+    for key, val in ovon_goals.items():
+        goal_keys.append(key.lower())
+        val_selected = random.choice(val).lower()
+        categories.add(val_selected)
+
+    print(
+        "Total categories: {}, Filtered: {}".format(
+            len(categories), filtered_goals
+        )
+    )
+    os.makedirs(os.path.dirname(output_path), exist_ok=True)
+
+    model, _ = clip.load(model_name)
+    batch = tokenize_and_batch(clip, list(categories))
+
+    with torch.no_grad():
+        print(batch.shape)
+        text_embedding = model.encode_text(batch.flatten(0, 1)).float()
+    print(
+        "Noisey OVON Goals: {}, Embeddings: {}, Shape: {}".format(
+            len(goal_keys), len(text_embedding), text_embedding[0].shape
+        )
+    )
+    save_to_disk(text_embedding, goal_keys, output_path)
+
+
+def main(dataset_path, output_path, dataset, model, add_noise=False):
+    if add_noise:
+        if dataset == "lnav":
+            cache_noisy_language_goals(dataset_path, output_path, model)
+        else:
+            cache_noisy_ovon_goals(dataset_path, output_path, model)
+    elif dataset == "ovon":
         cache_ovon_goals(dataset_path, output_path)
     elif dataset == "lnav":
         cache_language_goals(dataset_path, output_path, model)
@@ -251,7 +339,7 @@ if __name__ == "__main__":
     parser.add_argument(
         "--dataset",
         type=str,
-        required=True,
+        default="ovon",
         help="ovon",
     )
     parser.add_argument(
@@ -260,6 +348,17 @@ if __name__ == "__main__":
         required=True,
         help="RN50",
     )
+    parser.add_argument(
+        "--noise",
+        action="store_true",
+        dest="noise",
+    )
     args = parser.parse_args()
 
-    main(args.dataset_path, args.output_path, args.dataset, args.model)
+    main(
+        args.dataset_path,
+        args.output_path,
+        args.dataset,
+        args.model,
+        args.noise,
+    )
