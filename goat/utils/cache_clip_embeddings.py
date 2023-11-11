@@ -143,7 +143,42 @@ def cache_ovon_goals(dataset_path, output_path):
         )
     )
     cache_embeddings(goal_categories, output_path)
+    
+def cache_txt_goals(path, output_path):
+    categories = list(map(lambda x: x.strip(), open(path).readlines()))
 
+    print("Total goal categories: {}".format(len(categories)))
+    print(
+        "Train categories: ".format(
+            len(categories),
+        )
+    )
+    cache_embeddings(categories, output_path)
+    
+def cache_objectnav_goals(dataset_path, output_path):
+    # goal_categories = load_categories_from_dataset(dataset_path)
+    
+    files = glob.glob(os.path.join(dataset_path, "*json.gz"))
+
+    goal_categories = []
+    for f in tqdm(files):
+        dataset = load_dataset(f)
+        for goal_key in dataset["goals_by_category"].keys():
+            goal_categories.append(" ".join(goal_key.split("_")[1:]))
+    val_categories = load_categories_from_dataset(
+        dataset_path.replace("train", "val")
+    )
+    goal_categories.extend(val_categories)
+
+    print("Total goal categories: {}".format(len(goal_categories)))
+    print(
+        "Train categories: {}, Val categories: {}".format(
+            len(goal_categories),
+            len(val_categories)
+        )
+    )
+    cache_embeddings(goal_categories, output_path)
+    
 
 def cache_language_goals(dataset_path, output_path, model):
     files = glob.glob(os.path.join(dataset_path, "*json.gz"))
@@ -318,6 +353,10 @@ def main(dataset_path, output_path, dataset, model, add_noise=False):
         cache_language_goals(dataset_path, output_path, model)
     elif dataset == "goat":
         cache_goat_goals(dataset_path, output_path, model)
+    elif dataset == "objectnav":
+        cache_objectnav_goals(dataset_path, output_path)
+    elif dataset == "text":
+        cache_txt_goals(dataset_path, output_path)
     else:
         raise NotImplementedError
 
