@@ -275,7 +275,7 @@ def cache_noisy_language_goals(json_path, output_path, model_name):
 
 
 def cache_noisy_ovon_goals(json_path, output_path, model_name):
-    categories = set()
+    categories = []
 
     filtered_goals = 0
     ovon_goals = load_json(json_path)
@@ -283,7 +283,7 @@ def cache_noisy_ovon_goals(json_path, output_path, model_name):
     for key, val in ovon_goals.items():
         goal_keys.append(key.lower())
         val_selected = random.choice(val).lower()
-        categories.add(val_selected)
+        categories.append(val_selected)
 
     print(
         "Total categories: {}, Filtered: {}".format(

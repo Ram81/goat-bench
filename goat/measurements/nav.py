@@ -187,7 +187,7 @@ class GoatDistanceToGoal(Measure):
             or not np.allclose(
                 self._previous_position, current_position, atol=1e-4
             )
-            or True
+            # or True
         ):
             if self._config.distance_to == "VIEW_POINTS":
                 viewpoints = [
