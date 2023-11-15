@@ -96,6 +96,62 @@ def validate_goat(path):
     print("LanguageNav instances:{}".format(len(language_goals)))
 
 
+def goat_analysis(path):
+    episode_metrics = load_json(path)
+
+    spl_by_subtask_idx = defaultdict(float)
+    success_by_subtask_idx = defaultdict(float)
+    success_by_subtask_type = defaultdict(float)
+    spl_by_subtask_type = defaultdict(float)
+    count_by_subtask_type = defaultdict(float)
+
+    print(episode_metrics[0].keys(), episode_metrics[0]["subtasks"])
+
+    for metrics in episode_metrics:
+        for i in range(0, 5):
+            if i < 4:
+                spl_by_subtask_idx[i + 1] += metrics["spl_by_subtaskl"][i]
+                success_by_subtask_idx[i + 1] += metrics["success_by_subtask"][
+                    i
+                ]
+            else:
+                rem_spl = [
+                    metrics["spl_by_subtaskl"][j]
+                    for j in range(i, len(metrics["spl_by_subtaskl"]))
+                ]
+                spl_by_subtask_idx[i + 1] += sum(rem_spl) / len(rem_spl)
+
+                rem_success = [
+                    metrics["success_by_subtask"][j]
+                    for j in range(i, len(metrics["success_by_subtask"]))
+                ]
+                success_by_subtask_idx[i + 1] += sum(rem_success) / len(
+                    rem_success
+                )
+        for subtask_idx, subtask_meta in enumerate(metrics["subtasks"]):
+            success_by_subtask_type[subtask_meta[1]] += metrics[
+                "success_by_subtask"
+            ][subtask_idx]
+            spl_by_subtask_type[subtask_meta[1]] += metrics["spl_by_subtaskl"][
+                subtask_idx
+            ]
+            count_by_subtask_type[subtask_meta[1]] += 1
+
+    for k, v in spl_by_subtask_idx.items():
+        spl_by_subtask_idx[k] = v / len(episode_metrics)
+        success_by_subtask_idx[k] = v / len(episode_metrics)
+
+    for k, v in success_by_subtask_type.items():
+        success_by_subtask_type[k] = v / count_by_subtask_type[k]
+        spl_by_subtask_type[k] = v / count_by_subtask_type[k]
+
+    print()
+    print("SPL by subtask number", spl_by_subtask_idx)
+    print("Success by subtask number", success_by_subtask_idx)
+    print("Success by subtask type", success_by_subtask_type)
+    print("SPL by subtask type", spl_by_subtask_type)
+
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument(
@@ -107,4 +163,5 @@ if __name__ == "__main__":
 
     args = parser.parse_args()
 
-    validate_goat(args.path)
+    # validate_goat(args.path)
+    goat_analysis(args.path)
