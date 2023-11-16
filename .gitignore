@@ -20,3 +20,6 @@ slurm_logs/
 
 # scripts
 scripts/
+
+# examples
+examples/
