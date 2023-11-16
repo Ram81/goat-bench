@@ -52,6 +52,7 @@ class PointNavResNetCLIPPolicy(NetPolicy):
         add_instance_linear_projection: bool = False,
         croco_adapter: bool = False,
         use_croco: bool = False,
+        croco_noise: bool = False,
         croco_ckpt: str = None,
         use_hfov: bool = False,
         depth_ckpt: str = "",
@@ -83,6 +84,7 @@ class PointNavResNetCLIPPolicy(NetPolicy):
                 add_instance_linear_projection=add_instance_linear_projection,
                 croco_adapter=croco_adapter,
                 use_croco=use_croco,
+                croco_noise=croco_noise,
                 croco_ckpt=croco_ckpt,
                 use_hfov=use_hfov,
                 depth_ckpt=depth_ckpt,
@@ -144,6 +146,7 @@ class PointNavResNetCLIPPolicy(NetPolicy):
             add_instance_linear_projection=config.habitat_baselines.rl.policy.add_instance_linear_projection,
             croco_adapter=config.habitat_baselines.rl.policy.croco_adapter,
             use_croco=config.habitat_baselines.rl.policy.use_croco,
+            croco_noise=config.habitat_baselines.rl.policy.croco_noise,
             croco_ckpt=config.habitat_baselines.rl.policy.croco_ckpt,
             use_hfov=config.habitat_baselines.rl.policy.use_hfov,
             depth_ckpt=depth_ckpt,
@@ -196,6 +199,7 @@ class PointNavResNetCLIPNet(Net):
         add_instance_linear_projection: bool = False,
         croco_adapter: bool = False,
         use_croco: bool = False,
+        croco_noise: bool = False,
         croco_ckpt: str = None,
         use_hfov: bool = False,
         late_fusion: bool = False,
@@ -209,6 +213,7 @@ class PointNavResNetCLIPNet(Net):
         self.late_fusion = late_fusion
         self.croco_adapter = croco_adapter
         self.use_croco = use_croco
+        self.croco_noise = croco_noise
         self.croco_ckpt = croco_ckpt
         self.use_hfov = use_hfov
         self._n_prev_action = 32
@@ -344,6 +349,7 @@ class PointNavResNetCLIPNet(Net):
                 observation_space=observation_space,
                 checkpoint=self.croco_ckpt,
                 adapter=self.croco_adapter,
+                add_noise=self.croco_noise,
                 hidden_size=64, # NOTE: Total will be 49 * 64 per goal
             )
             self.croco_binocular_encoder.to(torch.device("cuda" if torch.cuda.is_available() else "cpu"))
