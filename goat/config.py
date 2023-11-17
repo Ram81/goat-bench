@@ -30,6 +30,7 @@ class ClipObjectGoalSensorConfig(LabSensorConfig):
 @dataclass
 class GoatInstanceImageGoalSensorConfig(LabSensorConfig):
     type: str = "GoatInstanceImageGoalSensor"
+    add_noise: bool = False
 
 @dataclass
 class GoatGoalSensorConfig(LabSensorConfig):
@@ -203,7 +204,6 @@ class OVONPolicyConfig(PolicyConfig):
     croco_adapter: bool = False
     use_croco: bool = False
     croco_ckpt: str = "goat/models/encoders/croco/pretrained_models/CroCo_V2_ViTBase_SmallDecoder.pth"
-    croco_noise: bool = False
     use_hfov: bool = False
     depth_ckpt: str = ""
     late_fusion: bool = False
