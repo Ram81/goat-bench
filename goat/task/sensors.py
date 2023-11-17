@@ -838,6 +838,7 @@ class GoatInstanceImageGoalSensor(RGBSensor):
         super().__init__(config=config)
         self._current_episode_id = None
         self._current_image_goal = None
+        self.add_noise = config.add_noise
 
     def _get_uuid(self, *args: Any, **kwargs: Any) -> str:
         return self.cls_uuid
@@ -901,6 +902,14 @@ class GoatInstanceImageGoalSensor(RGBSensor):
 
         self._remove_sensor(sensor_uuid)
         return img
+    
+    def apply_noise(self, image):
+        mean = 0
+        std = random.uniform(0.1, 2.0)
+        image = image + np.random.normal(
+            loc=mean, scale=std, size=image.shape
+        ).astype(np.float32)
+        return image.astype(np.uint8)
 
     def get_observation(
         self,
@@ -929,7 +938,13 @@ class GoatInstanceImageGoalSensor(RGBSensor):
                         if g["object_id"] == instance_id
                     ]
                     img_params = InstanceImageParameters(**goal[0]['image_goals'][goal_image_id])
-                    self._current_image_goal = self._get_instance_image_goal(img_params)
+                    image_goal = self._get_instance_image_goal(img_params)
+                    # plt.imsave(f'{scene_id}_{instance_id}_{goal_image_id}_orig.png', image_goal)
+                    if self.add_noise:
+                        # logger.info("Applying Noise")
+                        image_goal = self.apply_noise(image_goal)
+                        # plt.imsave(f'{scene_id}_{instance_id}_{goal_image_id}_noise.png', image_goal)
+                    self._current_image_goal = image_goal
                 else:
                     self._current_image_goal = dummy_image
             else:
