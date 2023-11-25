@@ -70,20 +70,6 @@ class CrocoBinocularEncoder(nn.Module):
             ),
             nn.Flatten()
         )
-    
-    # def apply_noise(self, image):
-    #     with torch.no_grad():
-    #         mean = 0
-    #         std = random.uniform(0.1, 2.0)
-    #         # Determine the device (cuda or cpu)
-    #         device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-
-    #         # Add noise using PyTorch
-    #         noise = torch.normal(mean=mean, std=std, size=image.shape).float().to(device)
-            
-    #         image = image + noise
-    #         image = torch.clamp(image, 0, 255).long()
-    #     return image
 
     def forward(self, observations) -> torch.Tensor:  # type: ignore
         rgb = observations["rgb"]
@@ -94,16 +80,11 @@ class CrocoBinocularEncoder(nn.Module):
         # NOTE: Do we need to handle the number of environments here in any way?
         if self.goal_instance_imagenav:
             instance_imagegoal = observations["instance_imagegoal"] if "instance_imagegoal" in observations else observations["goat_instance_imagegoal"]
-            # if self.add_noise:
-            #     print("Adding noise")
-            #     instance_imagegoal = self.apply_noise(instance_imagegoal)
             instance_imagegoal = instance_imagegoal.permute(0, 3, 1, 2)
             instance_imagegoal = self.preprocess(instance_imagegoal)
             goal_feat, goal_pos = self.encoder(instance_imagegoal)
         elif self.goal_imagenav:
             imagegoal = observations["image_goal_rotation"]
-            # if self.add_noise:
-            #     imagegoal = self.apply_noise(imagegoal)
             imagegoal = imagegoal.permute(0, 3, 1, 2)
             imagegoal = self.preprocess(imagegoal)
             goal_feat, goal_pos = self.encoder(imagegoal)
