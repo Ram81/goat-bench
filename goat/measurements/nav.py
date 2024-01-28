@@ -170,16 +170,25 @@ class GoatDistanceToGoal(Measure):
         current_position = self._sim.get_agent_state().position
 
         self.prev_distance_to_target = self._metric["distance_to_target"]
+        subtask_switched = False
         if self._current_subtask_idx != task.active_subtask_idx:
             self._previous_position = None
             self._current_subtask_idx = task.active_subtask_idx
             episode._shortest_path_cache = None
+            subtask_switched = True
 
         if self._current_subtask_idx == len(episode.tasks):
             self._metric = {
                 "distance_to_target": self._metric["distance_to_target"],
                 "prev_distance_to_target": self.prev_distance_to_target,
+                "episode_ended": True,
             }
+            if subtask_switched:
+                print(
+                    subtask_switched,
+                    self._current_subtask_idx,
+                    len(episode.tasks),
+                )
             return
 
         if (
@@ -196,7 +205,7 @@ class GoatDistanceToGoal(Measure):
                     for view_point in goal["view_points"]
                 ]
                 distance_to_target = self._sim.geodesic_distance(
-                    current_position, viewpoints, None
+                    current_position, viewpoints, episode
                 )
             else:
                 logger.error(
@@ -214,6 +223,7 @@ class GoatDistanceToGoal(Measure):
                 "distance_to_target": distance_to_target,
                 "prev_distance_to_target": self.prev_distance_to_target,
             }
+
         if not np.isfinite(
             self._metric["distance_to_target"]
         ) or not np.isfinite(self._metric["prev_distance_to_target"]):

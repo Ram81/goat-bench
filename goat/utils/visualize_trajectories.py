@@ -9,16 +9,29 @@ from habitat import get_config, logger
 from habitat.config import read_write
 from habitat.sims.habitat_simulator.actions import HabitatSimActions
 from habitat.tasks.nav.shortest_path_follower import ShortestPathFollower
-from habitat.utils.visualizations.utils import (append_text_to_image,
-                                                images_to_video,
-                                                observations_to_image)
+from habitat.utils.visualizations.utils import (
+    append_text_to_image,
+    images_to_video,
+    observations_to_image,
+)
 from habitat_sim.utils.common import quat_from_two_vectors
 from numpy import ndarray
 from tqdm import tqdm
 
-from goat.config import (ClipObjectGoalSensorConfig, GoatDistanceToGoalConfig,
-                         GoatDistanceToGoalRewardConfig, GoatSoftSPLConfig,
-                         GoatSPLConfig, GoatSuccessConfig)
+import frontier_exploration
+from frontier_exploration.measurements import (
+    FrontierExplorationMapMeasurementConfig,
+)
+from frontier_exploration.objnav_explorer import ObjNavExplorerSensorConfig
+from goat.config import (
+    ClipObjectGoalSensorConfig,
+    GoatDistanceToGoalConfig,
+    GoatDistanceToGoalRewardConfig,
+    GoatSoftSPLConfig,
+    GoatSPLConfig,
+    GoatSuccessConfig,
+    GoatTopDownMapConfig,
+)
 from goat.dataset import goat_dataset, ovon_dataset
 
 
@@ -71,7 +84,7 @@ def generate_trajectories(cfg, video_dir="", num_episodes=1):
         num_episodes = min(len(env.episodes), num_episodes)
         for episode_id in tqdm(range(num_episodes)):
             follower = ShortestPathFollower(env._sim, goal_radius, False)
-            env.reset()
+            observations = env.reset()
             success = 0
             episode = env.current_episode
             goal_position, goal_rotation = get_nearest_goal(episode, env)
@@ -80,25 +93,44 @@ def generate_trajectories(cfg, video_dir="", num_episodes=1):
             obs_list = []
             if goal_position is None:
                 continue
+            active_subtask_idx = env.task.active_subtask_idx
+            print(
+                "Subtask start",
+                active_subtask_idx,
+            )
 
             while not env.episode_over:
                 goal_position, goal_rotation = get_nearest_goal(episode, env)
-                best_action = follower.get_next_action(goal_position)
+                # best_action = follower.get_next_action(goal_position)
+                best_action = observations["objnav_explorer"][0]
 
-                if (
-                    "distance_to_goal" in info.keys()
-                    and info["distance_to_goal"]["distance_to_target"] < 0.1
-                    and best_action != HabitatSimActions.stop
-                ):
-                    best_action = HabitatSimActions.subtask_stop
+                # if (
+                #     "distance_to_goal" in info.keys()
+                #     and info["distance_to_goal"]["distance_to_target"] < 0.25
+                #     and best_action != HabitatSimActions.stop
+                # ):
+                #     best_action = HabitatSimActions.subtask_stop
+                #     active_subtask_idx = env.task.active_subtask_idx
 
                 task_id = env.task.active_subtask_idx
-                if best_action == HabitatSimActions.stop and task_id < len(
-                    episode.tasks
-                ):
-                    best_action = HabitatSimActions.subtask_stop
+                # if best_action == HabitatSimActions.stop and task_id < len(
+                #     episode.tasks
+                # ):
+                #     best_action = HabitatSimActions.subtask_stop
 
                 observations = env.step(best_action)
+
+                info = env.get_metrics()
+
+                if active_subtask_idx != env.task.active_subtask_idx:
+                    active_subtask_idx = env.task.active_subtask_idx
+                    print(
+                        "Subtask stop",
+                        best_action,
+                        info["distance_to_goal"],
+                        env.task.active_subtask_idx,
+                        len(episode.tasks),
+                    )
 
                 if best_action == HabitatSimActions.stop:
                     position = env.sim.get_agent_state().position
@@ -106,7 +138,6 @@ def generate_trajectories(cfg, video_dir="", num_episodes=1):
                         position, goal_rotation, False
                     )
 
-                info = env.get_metrics()
                 # print(
                 #     "Action: {}, Reward: {}".format(
                 #         best_action, info["goat_distance_to_goal_reward"]
@@ -137,6 +168,8 @@ def generate_trajectories(cfg, video_dir="", num_episodes=1):
                 total_success[k] += v
 
             for k, v in info["spl"].items():
+                if isinstance(v, list):
+                    continue
                 spl[k] += v
 
             for k, v in info["soft_spl"].items():
@@ -187,7 +220,15 @@ def main():
         config.habitat.task.measurements.spl = GoatSPLConfig()
         config.habitat.task.measurements.soft_spl = GoatSoftSPLConfig()
         print(config.habitat.task.measurements)
+        config.habitat.simulator.habitat_sim_v0.allow_sliding = True
         # del config.habitat.task.measurements["distance_to_goal_reward"]
+
+        config.habitat.task.lab_sensors[
+            "objnav_explorer"
+        ] = ObjNavExplorerSensorConfig()
+        config.habitat.task.measurements[
+            "frontier_exploration_map"
+        ] = FrontierExplorationMapMeasurementConfig()
         config.habitat.task.measurements[
             "goat_distance_to_goal_reward"
         ] = GoatDistanceToGoalRewardConfig()

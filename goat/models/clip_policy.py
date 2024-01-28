@@ -6,6 +6,7 @@ import numpy as np
 import torch
 from gym import spaces
 from gym.spaces import Dict as SpaceDict
+from habitat import logger
 from habitat.tasks.nav.nav import EpisodicCompassSensor, EpisodicGPSSensor
 from habitat.tasks.nav.object_nav_task import ObjectGoalSensor
 from habitat_baselines.common.baseline_registry import baseline_registry
@@ -121,6 +122,37 @@ class PointNavResNetCLIPPolicy(NetPolicy):
             depth_ckpt=depth_ckpt,
             late_fusion=late_fusion,
         )
+
+    def act(
+        self,
+        observations,
+        rnn_hidden_states,
+        prev_actions,
+        masks,
+        deterministic=False,
+    ):
+        # logger.info("In the act method")
+        import os
+
+        if os.environ.get("OVON_IL_DONT_CHEAT", "0") == "1":
+            return super().act(
+                observations,
+                rnn_hidden_states,
+                prev_actions,
+                masks,
+                deterministic=deterministic,
+            )
+
+        # logger.info("Running IL using cheating")
+        # TODO: Currently just cheating from teacher_label for imitation learning
+        num_envs = observations["rgb"].shape[0]
+        device = rnn_hidden_states.device
+        action_log_probs = torch.zeros(num_envs, 1).to(device)
+        value = torch.zeros(num_envs, 1).to(device)
+
+        action = observations["teacher_label"].to(device).long()
+
+        return value, action, action_log_probs, rnn_hidden_states
 
     def freeze_visual_encoders(self):
         for param in self.net.visual_encoder.parameters():
