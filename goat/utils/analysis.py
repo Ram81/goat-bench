@@ -1,5 +1,6 @@
 import argparse
 import glob
+import math
 import os
 from collections import defaultdict
 
@@ -107,6 +108,10 @@ def goat_analysis(path):
 
     print(episode_metrics[0].keys(), episode_metrics[0]["subtasks"])
 
+    lang_avg_len = 0
+    obj_avg_len = 0
+    lang_n_eps = 0
+    obj_n_eps = 0
     for metrics in episode_metrics:
         for i in range(0, 5):
             if i < 4:
@@ -128,6 +133,14 @@ def goat_analysis(path):
                 success_by_subtask_idx[i + 1] += sum(rem_success) / len(
                     rem_success
                 )
+            if metrics["subtasks"][i][1] == "description":
+                lang_avg_len += metrics["spl_by_subtaskl"][i]
+                lang_n_eps += metrics["success_by_subtask"][i]
+
+            if metrics["subtasks"][i][1] == "object":
+                obj_avg_len += metrics["spl_by_subtaskl"][i]
+                obj_n_eps += metrics["success_by_subtask"][i]
+
         for subtask_idx, subtask_meta in enumerate(metrics["subtasks"]):
             success_by_subtask_type[subtask_meta[1]] += metrics[
                 "success_by_subtask"
@@ -138,18 +151,28 @@ def goat_analysis(path):
             count_by_subtask_type[subtask_meta[1]] += 1
 
     for k, v in spl_by_subtask_idx.items():
-        spl_by_subtask_idx[k] = v / len(episode_metrics)
-        success_by_subtask_idx[k] = v / len(episode_metrics)
+        spl_by_subtask_idx[k] = round(v / len(episode_metrics), 3) * 100
+        success_by_subtask_idx[k] = (
+            round(success_by_subtask_idx[k] / len(episode_metrics), 3) * 100
+        )
 
     for k, v in success_by_subtask_type.items():
-        success_by_subtask_type[k] = v / count_by_subtask_type[k]
-        spl_by_subtask_type[k] = v / count_by_subtask_type[k]
+        success_by_subtask_type[k] = (
+            round(success_by_subtask_type[k] / count_by_subtask_type[k], 3)
+            * 100
+        )
+        spl_by_subtask_type[k] = (
+            round(spl_by_subtask_type[k] / count_by_subtask_type[k], 3) * 100
+        )
 
     print()
     print("SPL by subtask number", spl_by_subtask_idx)
     print("Success by subtask number", success_by_subtask_idx)
     print("Success by subtask type", success_by_subtask_type)
     print("SPL by subtask type", spl_by_subtask_type)
+
+    print("\nAvg lang desc len: {}".format(lang_avg_len / lang_n_eps))
+    print("Avg von desc len: {}".format(obj_avg_len / obj_n_eps))
 
 
 if __name__ == "__main__":

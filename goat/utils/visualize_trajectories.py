@@ -9,23 +9,16 @@ from habitat import get_config, logger
 from habitat.config import read_write
 from habitat.sims.habitat_simulator.actions import HabitatSimActions
 from habitat.tasks.nav.shortest_path_follower import ShortestPathFollower
-from habitat.utils.visualizations.utils import (
-    append_text_to_image,
-    images_to_video,
-    observations_to_image,
-)
+from habitat.utils.visualizations.utils import (append_text_to_image,
+                                                images_to_video,
+                                                observations_to_image)
 from habitat_sim.utils.common import quat_from_two_vectors
 from numpy import ndarray
 from tqdm import tqdm
 
-from goat.config import (
-    ClipObjectGoalSensorConfig,
-    GoatDistanceToGoalConfig,
-    GoatDistanceToGoalRewardConfig,
-    GoatSoftSPLConfig,
-    GoatSPLConfig,
-    GoatSuccessConfig,
-)
+from goat.config import (ClipObjectGoalSensorConfig, GoatDistanceToGoalConfig,
+                         GoatDistanceToGoalRewardConfig, GoatSoftSPLConfig,
+                         GoatSPLConfig, GoatSuccessConfig)
 from goat.dataset import goat_dataset, ovon_dataset
 
 
@@ -88,9 +81,6 @@ def generate_trajectories(cfg, video_dir="", num_episodes=1):
             if goal_position is None:
                 continue
 
-            # if episode_id < 2:
-            #     continue
-
             while not env.episode_over:
                 goal_position, goal_rotation = get_nearest_goal(episode, env)
                 best_action = follower.get_next_action(goal_position)
@@ -140,7 +130,6 @@ def generate_trajectories(cfg, video_dir="", num_episodes=1):
                 obs_list.append(frame)
 
                 success = info["success"]
-            print("ep end", success, info["distance_to_goal"])
 
             for k, v in success.items():
                 if isinstance(v, list):

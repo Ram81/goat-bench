@@ -25,9 +25,9 @@ conda activate goat
 export PYTHONPATH=/srv/flash1/rramrakhya3/fall_2023/habitat-sim/src_python/
 
 DATA_PATH="data/datasets/languagenav/hm3d/v5_final/"
-eval_ckpt_path_dir="data/new_checkpoints/languagenav/ver/resnetclip_rgb_bert_text/seed_3/"
-tensorboard_dir="tb/languagenav/ver/resnetclip_rgb_bert_text/seed_3/val_unseen_easy/"
-split="val_unseen_easy"
+# eval_ckpt_path_dir="data/new_checkpoints/languagenav/ver/resnetclip_rgb_bert_text/seed_3/"
+# tensorboard_dir="tb/languagenav/ver/resnetclip_rgb_bert_text/seed_3/val_unseen_easy/"
+# split="val_unseen_easy"
 
 echo "Evaluating ckpt: ${eval_ckpt_path_dir}"
 echo "Data path: ${DATA_PATH}/${split}/${split}.json.gz"
@@ -43,7 +43,8 @@ srun python -um goat.run \
   habitat.dataset.data_path="${DATA_PATH}/${split}/${split}.json.gz" \
   +habitat/task/lab_sensors@habitat.task.lab_sensors.language_goal_sensor=language_goal_sensor \
   ~habitat.task.lab_sensors.objectgoal_sensor \
-  habitat.task.lab_sensors.language_goal_sensor.cache=data/datasets/languagenav/hm3d/v5_final/embeddings/val_unseen_easy_bert_embedding.pkl \
+  habitat.task.lab_sensors.language_goal_sensor.cache=data/datasets/languagenav/hm3d/v5_final/embeddings/${split}_clip_embedding.pkl \
+  habitat.task.lab_sensors.language_goal_sensor.embedding_dim=1024 \
   habitat.task.measurements.success.success_distance=0.25 \
   habitat.dataset.type="LanguageNav-v1" \
   habitat.simulator.type="OVONSim-v0" \

@@ -25,9 +25,9 @@ conda activate goat
 export PYTHONPATH=/srv/flash1/rramrakhya3/fall_2023/habitat-sim/src_python/
 
 DATA_PATH="data/datasets/iin/hm3d/v2/"
-eval_ckpt_path_dir="data/new_checkpoints/iin/ver/resnetclip_rgb_vc1_image/seed_1/ckpt.70.pth"
-tensorboard_dir="tb/iin/ver/resnetclip_rgb_vc1_image/seed_1/val_seen_ckpt_70/"
-split="val_seen"
+# eval_ckpt_path_dir="data/new_checkpoints/iin/ver/resnetclip_rgb_vc1_image/seed_1/ckpt.70.pth"
+# tensorboard_dir="tb/iin/ver/resnetclip_rgb_vc1_image/seed_1/val_seen_ckpt_70/"
+# split="val_seen"
 
 echo "Evaluating ckpt: ${eval_ckpt_path_dir}"
 echo "Data path: ${DATA_PATH}/${split}/${split}.json.gz"
@@ -43,7 +43,8 @@ srun python -um goat.run \
   habitat.dataset.data_path="${DATA_PATH}/${split}/${split}.json.gz" \
   +habitat/task/lab_sensors@habitat.task.lab_sensors.cache_instance_imagegoal_sensor=cache_instance_imagegoal_sensor \
   ~habitat.task.lab_sensors.instance_imagegoal_sensor \
-  habitat.task.lab_sensors.cache_instance_imagegoal_sensor.cache=data/datasets/iin/hm3d/v2/val_seen_embeddings/ \
+  habitat.task.lab_sensors.cache_instance_imagegoal_sensor.cache=data/datasets/iin/hm3d/v2/${split}_embeddings/ \
+  habitat.task.lab_sensors.cache_instance_imagegoal_sensor.image_cache_encoder="CLIP" \
   habitat.task.measurements.success.success_distance=0.25 \
   habitat.simulator.type="OVONSim-v0" \
   habitat_baselines.load_resume_state_config=False \

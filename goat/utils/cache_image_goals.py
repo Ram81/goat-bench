@@ -66,7 +66,7 @@ class CacheGoals:
         if os.path.exists(
             os.path.join(
                 self.output_path,
-                f"{scene}_{self.encoder_name}_iin_embedding.pkl",
+                f"{scene}_{self.encoder_name}_goat_embedding.pkl",
             )
         ):
             print("Scene already cached: {}".format(scene))

@@ -25,8 +25,8 @@ conda activate goat
 
 export PYTHONPATH=/srv/flash1/rramrakhya3/fall_2023/habitat-sim/src_python/
 
-TENSORBOARD_DIR="tb/goat/ver/resnetclip_rgb_multimodal/seed_2_v0.1.4/"
-CHECKPOINT_DIR="data/new_checkpoints/goat/ver/resnetclip_rgb_multimodal/seed_2_v0.1.4/"
+TENSORBOARD_DIR="tb/goat/ver/resnetclip_rgb_multimodal_goal/seed_1_v0.1.4/"
+CHECKPOINT_DIR="data/new_checkpoints/goat/ver/resnetclip_rgb_multimodal_goal/seed_1_v0.1.4/"
 DATA_PATH="data/datasets/goat/v0.1.4/"
 
 srun python -um goat.run \
@@ -40,12 +40,12 @@ srun python -um goat.run \
   habitat_baselines.tensorboard_dir=${TENSORBOARD_DIR} \
   habitat_baselines.checkpoint_folder=${CHECKPOINT_DIR} \
   habitat.dataset.data_path=${DATA_PATH}/train/train.json.gz \
-  +habitat/task/lab_sensors@habitat.task.lab_sensors.goat_goal_sensor=goat_goal_sensor \
+  +habitat/task/lab_sensors@habitat.task.lab_sensors.goat_multi_goal_sensor=goat_multi_goal_sensor \
   ~habitat.task.lab_sensors.objectgoal_sensor \
-  habitat.task.lab_sensors.goat_goal_sensor.object_cache=data/clip_embeddings/ovon_stretch_final_cache.pkl \
-  habitat.task.lab_sensors.goat_goal_sensor.image_cache=data/datasets/iin/hm3d/v2/train_goal_embeddings/ \
-  habitat.task.lab_sensors.goat_goal_sensor.image_cache_encoder="CLIP_goat" \
-  habitat.task.lab_sensors.goat_goal_sensor.language_cache="data/datasets/languagenav/hm3d/v5_final/train_embeddings/clip_train_embeddings.pkl" \
+  habitat.task.lab_sensors.goat_multi_goal_sensor.object_cache=data/clip_embeddings/ovon_stretch_final_cache.pkl \
+  habitat.task.lab_sensors.goat_multi_goal_sensor.image_cache=data/datasets/iin/hm3d/v2/train_goal_embeddings/ \
+  habitat.task.lab_sensors.goat_multi_goal_sensor.image_cache_encoder="CLIP_goat" \
+  habitat.task.lab_sensors.goat_multi_goal_sensor.language_cache="data/datasets/languagenav/hm3d/v5_final/train_embeddings/clip_train_embeddings.pkl" \
   habitat.task.measurements.success.success_distance=0.25 \
   habitat.dataset.type="Goat-v1" \
   habitat.task.measurements.distance_to_goal.type=GoatDistanceToGoal \

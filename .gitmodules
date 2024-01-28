@@ -1,0 +1,3 @@
+[submodule "frontier_exploration"]
+	path = frontier_exploration
+	url = git@github.com:naokiyokoyama/frontier_exploration.git

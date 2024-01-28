@@ -680,3 +680,135 @@ class GoatGoalSensor(Sensor):
             else:
                 raise NotImplementedError
         return output_embedding
+
+
+@registry.register_sensor
+class GoatMultiGoalSensor(Sensor):
+    r"""A sensor for Goat goals"""
+    cls_uuid: str = "goat_subtask_multi_goal"
+
+    def __init__(
+        self,
+        *args: Any,
+        config: "DictConfig",
+        **kwargs: Any,
+    ):
+        self.image_cache_base_dir = config.image_cache
+        self.image_encoder = config.image_cache_encoder
+        self.image_cache = None
+        self.language_cache = load_pickle(config.language_cache)
+        self.object_cache = load_pickle(config.object_cache)
+        self._current_scene_id = ""
+        self._current_episode_id = ""
+        self._current_episode_image_goal = None
+        super().__init__(config=config)
+
+    def _get_uuid(self, *args: Any, **kwargs: Any) -> str:
+        return self.cls_uuid
+
+    def _get_sensor_type(self, *args: Any, **kwargs: Any):
+        return SensorTypes.SEMANTIC
+
+    def _get_observation_space(self, *args: Any, **kwargs: Any):
+        return spaces.Box(
+            low=-np.inf, high=np.inf, shape=(1024 * 3,), dtype=np.float32
+        )
+
+    def get_observation(
+        self,
+        observations,
+        *args: Any,
+        episode: Any,
+        task: Any,
+        **kwargs: Any,
+    ) -> np.ndarray:
+        episode_id = f"{episode.scene_id}_{episode.episode_id}"
+
+        if self._current_scene_id != episode.scene_id:
+            self._current_scene_id = episode.scene_id
+            scene_id = episode.scene_id.split("/")[-1].split(".")[0]
+            self.image_cache = load_pickle(
+                os.path.join(
+                    self.image_cache_base_dir,
+                    f"{scene_id}_{self.image_encoder}_embedding.pkl",
+                )
+            )
+
+        output_embedding = np.zeros((1024 * 3,), dtype=np.float32)
+        scene_id = episode.scene_id.split("/")[-1].split(".")[0]
+
+        task_type = "none"
+        if task.active_subtask_idx < len(episode.tasks):
+            if episode.tasks[task.active_subtask_idx][1] == "object":
+                category = episode.tasks[task.active_subtask_idx][0]
+                obj_embedding = self.object_cache[category]
+                output_embedding = np.concatenate(
+                    (obj_embedding, obj_embedding, obj_embedding)
+                )
+                task_type = "object"
+            elif episode.tasks[task.active_subtask_idx][1] == "description":
+                instance_id = episode.tasks[task.active_subtask_idx][2]
+                goal = [
+                    g
+                    for g in episode.goals[task.active_subtask_idx]
+                    if g["object_id"] == instance_id
+                ]
+                uuid = goal[0]["lang_desc"].lower()
+                lang_embedding = self.language_cache[uuid]
+
+                uuid = "{}_{}".format(scene_id, instance_id)
+                random_idx = random.choice(
+                    range(
+                        len(
+                            self.image_cache[
+                                "{}_{}".format(scene_id, instance_id)
+                            ]
+                        )
+                    ),
+                )
+
+                img_embedding = self.image_cache[
+                    "{}_{}".format(scene_id, instance_id)
+                ][random_idx]["embedding"]
+
+                category = episode.tasks[task.active_subtask_idx][0]
+                cat_embedding = self.object_cache[category]
+
+                output_embedding = np.concatenate(
+                    (lang_embedding, img_embedding, cat_embedding)
+                )
+                task_type = "lang"
+            elif episode.tasks[task.active_subtask_idx][1] == "image":
+                instance_id = episode.tasks[task.active_subtask_idx][2]
+                curent_task = episode.tasks[task.active_subtask_idx]
+                scene_id = episode.scene_id.split("/")[-1].split(".")[0]
+
+                uuid = "{}_{}".format(scene_id, instance_id)
+
+                img_embedding = self.image_cache[
+                    "{}_{}".format(scene_id, instance_id)
+                ][curent_task[-1]]["embedding"]
+
+                category = episode.tasks[task.active_subtask_idx][0]
+                cat_embedding = self.object_cache[category]
+
+                goal = [
+                    g
+                    for g in episode.goals[task.active_subtask_idx]
+                    if g["object_id"] == instance_id
+                ]
+                uuid = goal[0]["lang_desc"]
+                if uuid is not None:
+                    uuid = uuid.lower()
+                    lang_embedding = self.language_cache[uuid]
+                else:
+                    lang_embedding = cat_embedding
+
+                output_embedding = np.concatenate(
+                    (lang_embedding, img_embedding, cat_embedding)
+                )
+
+                task_type = "image"
+            else:
+                raise NotImplementedError
+        return output_embedding

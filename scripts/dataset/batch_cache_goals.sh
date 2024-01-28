@@ -18,7 +18,7 @@ do
   base=${scene_id%.*}  # remove .gz
   base=${base%.*}  # remove .json
 
-  if [ -f "${output_path}/${base}_${encoder}_iin_embedding.pkl" ]; then
+  if [ -f "${output_path}/${base}_${encoder}_goat_embedding.pkl" ]; then
     echo "Skipping ${base}"
     continue
   fi
@@ -29,6 +29,7 @@ do
   --error=slurm_logs/dataset/iin-$split-${base}.err \
   --gpus 1 \
   --cpus-per-task 6 \
+  --exclude="fiona,irona,vicki,ephemeral-3" \
   --export=ALL,scene=$base,config=$config_path,split=$split,input_path=$input_path,output_path=$output_path,encoder=$encoder \
   scripts/dataset/cache_goal_embeddings.sh
 done

@@ -8,6 +8,7 @@ from habitat.config.default_structured_configs import (
     LabSensorConfig,
     MeasurementConfig,
     SimulatorConfig,
+    TopDownMapMeasurementConfig,
 )
 from habitat_baselines.config.default_structured_configs import (
     HabitatBaselinesRLConfig,
@@ -35,6 +36,21 @@ class GoatGoalSensorConfig(LabSensorConfig):
     language_cache: str = ""
     image_cache: str = ""
     image_cache_encoder: str = ""
+
+
+@dataclass
+class GoatMultiGoalSensorConfig(LabSensorConfig):
+    type: str = "GoatMultiGoalSensor"
+    object_cache: str = ""
+    language_cache: str = ""
+    image_cache: str = ""
+    image_cache_encoder: str = ""
+
+
+@dataclass
+class GoatTopDownMapConfig(TopDownMapMeasurementConfig):
+    type: str = "GoatTopDownMap"
+    draw_shortest_path: bool = False
 
 
 @dataclass
@@ -201,6 +217,7 @@ class OVONBaselinesRLConfig(HabitatBaselinesRLConfig):
     rl: OVONRLConfig = OVONRLConfig()
     should_load_agent_state: bool = True
     debug: bool = False
+    ablate_memory: bool = False
 
 
 @dataclass
@@ -242,6 +259,13 @@ cs.store(
     group="habitat/task/lab_sensors",
     name="goat_goal_sensor",
     node=GoatGoalSensorConfig,
+)
+
+cs.store(
+    package=f"habitat.task.lab_sensors.goat_multi_goal_sensor",
+    group="habitat/task/lab_sensors",
+    name="goat_multi_goal_sensor",
+    node=GoatMultiGoalSensorConfig,
 )
 
 cs.store(

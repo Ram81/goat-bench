@@ -21,7 +21,8 @@ from torchvision import transforms as T
 
 from goat.task.sensors import (CacheImageGoalSensor, ClipGoalSelectorSensor,
                                ClipImageGoalSensor, ClipObjectGoalSensor,
-                               GoatGoalSensor, LanguageGoalSensor)
+                               GoatGoalSensor, GoatMultiGoalSensor,
+                               LanguageGoalSensor)
 
 
 @baseline_registry.register_policy(name="PointNavResnetCLIPPolicy")
@@ -243,9 +244,28 @@ class PointNavResNetCLIPNet(Net):
                 rnn_input_size_info["clip_goal"] = object_goal_size
 
         if GoatGoalSensor.cls_uuid in observation_space.spaces:
-            clip_embedding = 1024
+            clip_embedding = int(
+                observation_space.spaces[GoatGoalSensor.cls_uuid].shape[0]
+            )
             print(
                 f"GOAT CLIP embedding: {clip_embedding}, "
+                f"Add GOAT CLIP linear: {add_clip_linear_projection}"
+            )
+            if self.add_clip_linear_projection:
+                self.goat_embeeding = nn.Linear(clip_embedding, 256)
+                goat_goal_size = 256
+            else:
+                goat_goal_size = clip_embedding
+
+            if not late_fusion:
+                rnn_input_size += goat_goal_size
+                rnn_input_size_info["goat_goal"] = goat_goal_size
+        elif GoatMultiGoalSensor.cls_uuid in observation_space.spaces:
+            clip_embedding = int(
+                observation_space.spaces[GoatMultiGoalSensor.cls_uuid].shape[0]
+            )
+            print(
+                f"GOAT Mutli Goal CLIP embedding: {clip_embedding}, "
                 f"Add GOAT CLIP linear: {add_clip_linear_projection}"
             )
             if self.add_clip_linear_projection:
@@ -265,9 +285,9 @@ class PointNavResNetCLIPNet(Net):
             )
         )
         if LanguageGoalSensor.cls_uuid in observation_space.spaces:
-            embedding_dim = int(observation_space.spaces[
-                LanguageGoalSensor.cls_uuid
-            ].shape[0])
+            embedding_dim = int(
+                observation_space.spaces[LanguageGoalSensor.cls_uuid].shape[0]
+            )
             print(
                 f"Language embedding: {embedding_dim}, "
                 f"Add Language linear: {add_language_linear_projection}"
@@ -407,6 +427,11 @@ class PointNavResNetCLIPNet(Net):
 
         if GoatGoalSensor.cls_uuid in observations:
             goat_goal = observations[GoatGoalSensor.cls_uuid]
+            if self.add_clip_linear_projection:
+                goat_goal = self.goat_embeeding(goat_goal)
+            x.append(goat_goal)
+        elif GoatMultiGoalSensor.cls_uuid in observations:
+            goat_goal = observations[GoatMultiGoalSensor.cls_uuid]
             if self.add_clip_linear_projection:
                 goat_goal = self.goat_embeeding(goat_goal)
             x.append(goat_goal)

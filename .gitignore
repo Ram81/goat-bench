@@ -19,4 +19,4 @@ train.log
 slurm_logs/
 
 # scripts
-scripts/
+# scripts/

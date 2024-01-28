@@ -7,7 +7,7 @@ tb_dir=$4
 baseline_name=$5
 
 
-count=142
+count=50
 num_ckpt_files=`ls ${ckpt_dir}/*.pth | wc -l`
 
 echo "Num ckpt files: $num_ckpt_files, Interval: $ckpt_interval"
@@ -30,10 +30,8 @@ do
     --constraint "a40|2080_ti|rtx_6000" \
     --exclude="fiona,irona,vicki,ephemeral-3,alexa" \
     --export=ALL,eval_ckpt_path_dir=$current_ckpt_dir,tensorboard_dir=$tensorboard_dir,split=$split \
-    scripts/eval/2-goat-eval.sh
-    # scripts/eval/4-goat-eval-ablate-memory.sh
-    # scripts/eval/3-goat-eval-noisy.sh
+    scripts/eval/1-instance-imagenav-eval.sh
+    # scripts/eval/1-languagenav-eval.sh
   count=$((count + $ckpt_interval))
-  break
 done
 

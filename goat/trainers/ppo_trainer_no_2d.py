@@ -119,6 +119,8 @@ class GoatPPOTrainer(PPOTrainer):
 
         if self.config.habitat_baselines.should_load_agent_state:
             self.agent.load_state_dict(ckpt_dict["state_dict"])
+            logger.info("Loaded agent state from: " + checkpoint_path)
+            print("Loading the checkpoint from: " + checkpoint_path)
         self.actor_critic = self.agent.actor_critic
 
         observations = self.envs.reset()
@@ -208,6 +210,24 @@ class GoatPPOTrainer(PPOTrainer):
                 )
 
                 prev_actions.copy_(actions)  # type: ignore
+
+            if self.config.habitat_baselines.ablate_memory:
+                subtask_stop_mask = (
+                    (1 - (actions == 6).long())
+                    .long()
+                    .unsqueeze(-1)
+                    .to(test_recurrent_hidden_states.device)
+                )
+                print(
+                    "subtask_stop_mask shape",
+                    subtask_stop_mask.shape,
+                    test_recurrent_hidden_states.shape,
+                )
+                test_recurrent_hidden_states = (
+                    subtask_stop_mask * test_recurrent_hidden_states
+                )
+                if (actions == 6).any():
+                    print("subtask_stop_mask", subtask_stop_mask, actions)
             # NB: Move actions to CPU.  If CUDA tensors are
             # sent in to env.step(), that will create CUDA contexts
             # in the subprocesses.
@@ -248,6 +268,7 @@ class GoatPPOTrainer(PPOTrainer):
                 observations,
                 device=self.device,
             )
+            vis_batch = {k: v.clone() for k, v in batch.items() if "rgb" in k}
             batch = apply_obs_transforms_batch(batch, self.obs_transforms)  # type: ignore
 
             not_done_masks = torch.tensor(
@@ -280,15 +301,34 @@ class GoatPPOTrainer(PPOTrainer):
                 if len(self.config.habitat_baselines.eval.video_option) > 0:
                     # TODO move normalization / channel changing out of the policy and undo it here
                     frame = observations_to_image(
-                        {k: v[i] for k, v in batch.items()}, infos[i]
+                        {k: v[i] for k, v in vis_batch.items() if "rgb" in k},
+                        {
+                            "top_down_map": {
+                                k.split(".")[-1]: v
+                                for k, v in infos[i].items()
+                                if "top_down_map" in k
+                            }
+                        },
                     )
+                    print("Info: {}".format(infos[i].keys()))
                     if not not_done_masks[i].item():
                         # The last frame corresponds to the first frame of the next episode
                         # but the info is correct. So we use a black frame
                         frame = observations_to_image(
-                            {k: v[i] * 0.0 for k, v in batch.items()}, infos[i]
+                            {
+                                k: v[i] * 0.0
+                                for k, v in vis_batch.items()
+                                if "rgb" in k
+                            },
+                            {
+                                "top_down_map": {
+                                    k.split(".")[-1]: v
+                                    for k, v in infos[i].items()
+                                    if "top_down_map" in k
+                                }
+                            },
                         )
-                    frame = overlay_frame(frame, infos[i])
+                    # frame = overlay_frame(frame, infos[i])
                     rgb_frames[i].append(frame)
 
                 # episode ended
@@ -337,7 +377,7 @@ class GoatPPOTrainer(PPOTrainer):
                             metrics=self._extract_scalars_from_info(infos[i]),
                             fps=self.config.habitat_baselines.video_fps,
                             tb_writer=writer,
-                            keys_to_include_in_name=self.config.habitat_baselines.eval_keys_to_include_in_name,
+                            keys_to_include_in_name=["success.partial_success"],
                         )
 
                         rgb_frames[i] = []

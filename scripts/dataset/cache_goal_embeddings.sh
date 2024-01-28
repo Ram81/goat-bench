@@ -36,5 +36,4 @@ srun python goat/utils/cache_image_goals.py \
   --input-path $input_path \
   --output-path $output_path \
   --scene $scene \
-  --encoder $encoder \
-  --add-noise
+  --encoder $encoder
