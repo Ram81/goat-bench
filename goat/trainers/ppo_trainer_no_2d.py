@@ -16,16 +16,13 @@ from habitat.utils.visualizations.utils import observations_to_image
 from habitat_baselines import PPOTrainer
 from habitat_baselines.common.baseline_registry import baseline_registry
 from habitat_baselines.common.construct_vector_env import construct_envs
-from habitat_baselines.common.obs_transformers import apply_obs_transforms_batch
+from habitat_baselines.common.obs_transformers import \
+    apply_obs_transforms_batch
 from habitat_baselines.common.tensorboard_utils import TensorboardWriter
 from habitat_baselines.rl.ddppo.algo import DDPPO
-from habitat_baselines.utils.common import (
-    batch_obs,
-    generate_video,
-    get_num_actions,
-    inference_mode,
-    is_continuous_action_space,
-)
+from habitat_baselines.utils.common import (batch_obs, generate_video,
+                                            get_num_actions, inference_mode,
+                                            is_continuous_action_space)
 from omegaconf import OmegaConf
 
 from goat.utils.utils import write_json
@@ -187,6 +184,8 @@ class GoatPPOTrainer(PPOTrainer):
 
         pbar = tqdm.tqdm(total=number_of_eval_episodes * evals_per_ep)
         self.actor_critic.eval()
+
+        logger.info("Starting eval episodes")
 
         episode_metrics = []
         while (
@@ -419,7 +418,7 @@ class GoatPPOTrainer(PPOTrainer):
         aggregated_stats = {}
         for stat_key in next(iter(stats_episodes.values())).keys():
             aggregated_stats[stat_key] = np.mean(
-                [v[stat_key] for v in stats_episodes.values()]
+                [v[stat_key] for v in stats_episodes.values() if stat_key in v]
             )
 
         for k, v in aggregated_stats.items():

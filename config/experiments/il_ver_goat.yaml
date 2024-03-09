@@ -60,7 +60,7 @@ habitat_baselines:
     ppo:
       # ppo params
       clip_param: 0.2
-      ppo_epoch: 1
+      ppo_epoch: 2
       num_mini_batch: 1
       value_loss_coef: 0.5
       entropy_coef: 0.01

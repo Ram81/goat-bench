@@ -222,6 +222,7 @@ class GoatDistanceToGoal(Measure):
             self._metric = {
                 "distance_to_target": distance_to_target,
                 "prev_distance_to_target": self.prev_distance_to_target,
+                "episode_ended": False,
             }
 
         if not np.isfinite(

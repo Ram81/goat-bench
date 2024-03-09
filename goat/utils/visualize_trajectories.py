@@ -94,10 +94,14 @@ def generate_trajectories(cfg, video_dir="", num_episodes=1):
             if goal_position is None:
                 continue
             active_subtask_idx = env.task.active_subtask_idx
-            print(
-                "Subtask start",
-                active_subtask_idx,
+            logger.info(
+                "Subtask start {}".format(
+                    active_subtask_idx,
+                )
             )
+            steps_per_subtask = []
+            task_reset_prev_step = False
+            steps = 0
 
             while not env.episode_over:
                 goal_position, goal_rotation = get_nearest_goal(episode, env)
@@ -112,25 +116,38 @@ def generate_trajectories(cfg, video_dir="", num_episodes=1):
                 #     best_action = HabitatSimActions.subtask_stop
                 #     active_subtask_idx = env.task.active_subtask_idx
 
-                task_id = env.task.active_subtask_idx
                 # if best_action == HabitatSimActions.stop and task_id < len(
                 #     episode.tasks
                 # ):
                 #     best_action = HabitatSimActions.subtask_stop
+                pre_metrics = env.get_metrics()
+
+                if best_action == 6:
+                    logger.info(
+                        "Step {} - {} - {}".format(
+                            steps, best_action, env.task.active_subtask_idx
+                        )
+                    )
 
                 observations = env.step(best_action)
+                steps_per_subtask.append(best_action)
 
                 info = env.get_metrics()
 
                 if active_subtask_idx != env.task.active_subtask_idx:
                     active_subtask_idx = env.task.active_subtask_idx
-                    print(
-                        "Subtask stop",
-                        best_action,
-                        info["distance_to_goal"],
-                        env.task.active_subtask_idx,
-                        len(episode.tasks),
+                    logger.info(
+                        "Subtask stop {} - {} - {} - {} - {} - {} - {}\n".format(
+                            best_action,
+                            pre_metrics["distance_to_goal"],
+                            info["distance_to_goal"],
+                            env.task.active_subtask_idx,
+                            len(episode.tasks),
+                            steps_per_subtask,
+                            observations["objnav_explorer"],
+                        )
                     )
+                    steps_per_subtask = []
 
                 if best_action == HabitatSimActions.stop:
                     position = env.sim.get_agent_state().position
@@ -159,6 +176,7 @@ def generate_trajectories(cfg, video_dir="", num_episodes=1):
                     "Goal: {}".format(text),
                 )
                 obs_list.append(frame)
+                steps += 1
 
                 success = info["success"]
 

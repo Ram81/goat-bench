@@ -2,12 +2,12 @@
 #SBATCH --job-name=goat
 #SBATCH --output=slurm_logs/eval/goat-%j.out
 #SBATCH --error=slurm_logs/eval/goat-%j.err
-#SBATCH --gpus 1
+#SBATCH --gpus a40:1
 #SBATCH --nodes 1
 #SBATCH --cpus-per-task 6
 #SBATCH --ntasks-per-node 1
-#SBATCH --constraint="a40"
-#SBATCH --partition=short
+#SBATCH --partition=cvmlp-lab
+#SBATCH --qos=short
 #SBATCH --exclude=xaea-12
 #SBATCH --signal=USR1@100
 
@@ -29,12 +29,13 @@ DATA_PATH="data/datasets/goat/v0.1.4"
 # tensorboard_dir="tb/goat/ver/resnetclip_rgb_multimodal/seed_1/val_seen/"
 # split="val_seen"
 
+export OVON_IL_DONT_CHEAT=1
+
 srun python -um goat.run \
   --run-type eval \
   --exp-config config/experiments/ver_goat.yaml \
   habitat_baselines.num_environments=1 \
   habitat_baselines.trainer_name="goat_ppo" \
-  habitat_baselines.eval.video_option=["disk"] \
   habitat_baselines.video_dir="${tensorboard_dir}/videos" \
   habitat_baselines.rl.policy.name=PointNavResnetCLIPPolicy \
   habitat_baselines.rl.ddppo.train_encoder=False \
@@ -64,7 +65,8 @@ srun python -um goat.run \
   habitat_baselines.load_resume_state_config=False \
   habitat_baselines.eval.use_ckpt_config=False \
   habitat_baselines.eval.split=$split \
-  habitat.dataset.content_scenes="['5cdEh9F2hJL']" #\
+  # habitat.dataset.content_scenes="['5cdEh9F2hJL']" #\
   # habitat_baselines.should_load_agent_state=False
+  # habitat_baselines.eval.video_option=["disk"] \
 
 touch $checkpoint_counter

@@ -7,7 +7,7 @@ tb_dir=$4
 baseline_name=$5
 
 
-count=50
+count=4
 num_ckpt_files=`ls ${ckpt_dir}/*.pth | wc -l`
 
 echo "Num ckpt files: $num_ckpt_files, Interval: $ckpt_interval"
@@ -25,12 +25,10 @@ do
   sbatch --job-name=goat-${split}-${count} \
     --output=slurm_logs/eval/${baseline_name}-${split}-${count}.out \
     --error=slurm_logs/eval/${baseline_name}-${split}-${count}.err \
-    --gpus 1 \
     --cpus-per-task 6 \
-    --constraint "a40|2080_ti|rtx_6000" \
-    --exclude="fiona,irona,vicki,ephemeral-3,alexa" \
+    --exclude="fiona,irona,vicki,ephemeral-3,alexa,sonny,xaea-12" \
     --export=ALL,eval_ckpt_path_dir=$current_ckpt_dir,tensorboard_dir=$tensorboard_dir,split=$split \
-    scripts/eval/1-instance-imagenav-eval.sh
+    scripts/eval/2-goat-eval.sh
     # scripts/eval/1-languagenav-eval.sh
   count=$((count + $ckpt_interval))
 done
