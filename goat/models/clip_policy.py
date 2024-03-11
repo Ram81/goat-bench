@@ -13,17 +13,23 @@ from habitat_baselines.common.baseline_registry import baseline_registry
 from habitat_baselines.rl.ddppo.policy import PointNavResNetNet
 from habitat_baselines.rl.ddppo.policy.resnet import resnet18
 from habitat_baselines.rl.ddppo.policy.resnet_policy import ResNetEncoder
-from habitat_baselines.rl.models.rnn_state_encoder import \
-    build_rnn_state_encoder
+from habitat_baselines.rl.models.rnn_state_encoder import (
+    build_rnn_state_encoder,
+)
 from habitat_baselines.rl.ppo import Net, NetPolicy
 from habitat_baselines.utils.common import get_num_actions
 from torch import nn as nn
 from torchvision import transforms as T
 
-from goat.task.sensors import (CacheImageGoalSensor, ClipGoalSelectorSensor,
-                               ClipImageGoalSensor, ClipObjectGoalSensor,
-                               GoatGoalSensor, GoatMultiGoalSensor,
-                               LanguageGoalSensor)
+from goat.task.sensors import (
+    CacheImageGoalSensor,
+    ClipGoalSelectorSensor,
+    ClipImageGoalSensor,
+    ClipObjectGoalSensor,
+    GoatGoalSensor,
+    GoatMultiGoalSensor,
+    LanguageGoalSensor,
+)
 
 
 @baseline_registry.register_policy(name="PointNavResnetCLIPPolicy")
@@ -208,6 +214,9 @@ class PointNavResNetCLIPNet(Net):
         self.add_instance_linear_projection = add_instance_linear_projection
         self.late_fusion = late_fusion
         self._n_prev_action = 32
+
+        self.rnn_type = rnn_type
+        self._num_recurrent_layers = num_recurrent_layers
         if discrete_actions:
             self.prev_action_embedding = nn.Embedding(
                 action_space.n + 1, self._n_prev_action
@@ -373,6 +382,7 @@ class PointNavResNetCLIPNet(Net):
             rnn_input_size_info["visual_feats"] = hidden_size
 
         self._hidden_size = hidden_size
+        self.rnn_input_size = rnn_input_size
 
         print("RNN input size info: ")
         total = 0
@@ -385,14 +395,17 @@ class PointNavResNetCLIPNet(Net):
         print("  " + "-" * (len(total_str) - 2))
         print(total_str)
 
-        self.state_encoder = build_rnn_state_encoder(
-            rnn_input_size,
-            self._hidden_size,
-            rnn_type=rnn_type,
-            num_layers=num_recurrent_layers,
-        )
+        self.state_encoder = self.build_state_encoder()
 
         self.train()
+
+    def build_state_encoder(self):
+        return build_rnn_state_encoder(
+            self.rnn_input_size,
+            self._hidden_size,
+            rnn_type=self.rnn_type,
+            num_layers=self._num_recurrent_layers,
+        )
 
     @property
     def output_size(self):
