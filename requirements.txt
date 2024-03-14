@@ -7,3 +7,4 @@ seaborn
 open3d
 timm
 openai
+flamingo-pytorch==0.1.2

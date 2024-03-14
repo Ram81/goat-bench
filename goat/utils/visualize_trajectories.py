@@ -18,11 +18,11 @@ from habitat_sim.utils.common import quat_from_two_vectors
 from numpy import ndarray
 from tqdm import tqdm
 
-import frontier_exploration
-from frontier_exploration.measurements import (
-    FrontierExplorationMapMeasurementConfig,
-)
-from frontier_exploration.objnav_explorer import ObjNavExplorerSensorConfig
+# import frontier_exploration
+# from frontier_exploration.measurements import (
+#     FrontierExplorationMapMeasurementConfig,
+# )
+# from frontier_exploration.objnav_explorer import ObjNavExplorerSensorConfig
 from goat.config import (
     ClipObjectGoalSensorConfig,
     GoatDistanceToGoalConfig,
