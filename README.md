@@ -47,7 +47,7 @@ pip install ftfy regex tqdm GPUtil trimesh seaborn timm scikit-learn einops tran
 ```
 
 
-## :floppy_disk: Downloading HM3D Scene and GOAT-Bench Dataset
+## :floppy_disk: Dataset
 
 - Download the HM3D dataset using the instructions [here](https://github.com/facebookresearch/habitat-sim/blob/main/DATASETS.md#habitat-matterport-3d-research-dataset-hm3d) (download the full HM3D dataset for use with habitat)
 
