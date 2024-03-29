@@ -8,7 +8,7 @@ Mukul Khanna*, Ram Ramrakhya*, Gunjan Chhablani, Sriram Yenamandra, Theophile Ge
     <a href="https://mukulkhanna.github.io/goat-bench/">Project Page</a>
 </p>
 
-## GOAT-Bench
+## :robot: GOAT-Bench
 
 <p align="center">
   <img src="imgs/teaser.jpg" width="700">
