@@ -1,0 +1,9 @@
+ftfy
+regex
+tqdm
+GPUtil
+trimesh
+seaborn
+open3d
+timm
+openai
