@@ -53,7 +53,7 @@ pip install ftfy regex tqdm GPUtil trimesh seaborn timm scikit-learn einops tran
 
 - Move the HM3D scene dataset or create a symlink at `data/scene_datasets/hm3d`.
 
-- Download the GOAT-Bench episode dataset from [here]().
+- Download the GOAT-Bench episode dataset from [here](https://drive.google.com/file/d/1N0UbpXK3v7oTphC4LoDqlNeMHbrwkbPe/view?usp=sharing).
 
 ### Dataset Folder Structure
 
@@ -69,10 +69,11 @@ The code requires the datasets in `data` folder in the following format:
   │  │  ├── datasets
   │  │  │  ├── goat_bench/
   │  │  │  │  ├── hm3d/
-  │  │  │  │  │  ├── train/
-  │  │  │  │  │  ├── val_seen/
-  │  │  │  │  │  ├── val_seen_synonyms/
-  │  │  │  │  │  ├── val_unseen/
+  │  │  │  │  |  ├── v1/
+  │  │  │  │  │  │  ├── train/
+  │  │  │  │  │  │  ├── val_seen/
+  │  │  │  │  │  │  ├── val_seen_synonyms/
+  │  │  │  │  │  │  ├── val_unseen/
   ```
 
 ## :bar_chart: Training
