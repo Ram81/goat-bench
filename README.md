@@ -23,7 +23,6 @@ GOAT-Bench is a benchmark for the Go to Any Thing (GOAT) task where an agent is 
 
 Create the conda environment and install all of the dependencies. Mamba is recommended for faster installation:
 ```bash
-# Record of how the environment was set up
 # Create conda environment. Mamba is recommended for faster installation.
 conda_env_name=goat
 mamba create -n $conda_env_name python=3.7 cmake=3.14.0 -y
