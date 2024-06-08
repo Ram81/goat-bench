@@ -110,7 +110,7 @@ sbatch scripts/train/2-goat-ver-monolithic.sh
 ```
 
 
-## Evaluation
+## 🎯 Evaluation
 
 ### SenseAct-NN Monolithic Baseline
 
