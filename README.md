@@ -188,7 +188,7 @@ If you use this code or benchmark in your research, please consider citing:
 ```
 @inproceedings{khanna2024goatbench,
       title={GOAT-Bench: A Benchmark for Multi-Modal Lifelong Navigation}, 
-      author={Mukul Khanna and Ram Ramrakhya and Gunjan Chhablani and Sriram Yenamandra and Theophile Gervet and Matthew Chang and Zsolt Kira and Devendra Singh Chaplot and Dhruv Batra and Roozbeh Mottaghi},
+      author={Mukul Khanna* and Ram Ramrakhya* and Gunjan Chhablani and Sriram Yenamandra and Theophile Gervet and Matthew Chang and Zsolt Kira and Devendra Singh Chaplot and Dhruv Batra and Roozbeh Mottaghi},
       year={2024},
       booktitle={CVPR},
 }
