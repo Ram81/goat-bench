@@ -153,7 +153,7 @@ Run the following command to evaluate the SenseAct-NN skill chain policy that ch
 tensorboard_dir="/path/to/tensorboard/dir/"
 eval_ckpt_path_dir="/path/to/goat-assets/checkpoints/sense_act_nn_skill_chain/"
 
-python -um goat.run \
+python -um goat_bench.run \
   --run-type eval \
   --exp-config config/experiments/ver_goat_skill_chain.yaml \
   habitat_baselines.num_environments=1 \
