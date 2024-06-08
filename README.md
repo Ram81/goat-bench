@@ -43,6 +43,11 @@ pip install -e habitat-baselines
 pip install -r requirements.txt
 pip install git+https://github.com/openai/CLIP.git
 pip install ftfy regex tqdm GPUtil trimesh seaborn timm scikit-learn einops transformers
+
+git clone  https://github.com/facebookresearch/eai-vc.git
+cd eai-vc
+
+pip install -e vc_models/
 ```
 
 

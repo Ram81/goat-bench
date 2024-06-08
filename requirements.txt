@@ -7,3 +7,4 @@ seaborn
 open3d
 timm
 openai
+salesforce-lavis
