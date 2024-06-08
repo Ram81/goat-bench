@@ -77,7 +77,7 @@ The code requires the datasets in `data` folder in the following format:
 
 ### Cached Embeddings and Model Checkpoints
 
-In order to increase training throughput we leverage frozen pretrained visual and text encoder (ex: CLIP) for encoding goals. As the goal encoders are not being finetuned during training we cache the embeddings for all object categories, language instructions and image goals on disk. You can download these embeddings using following command:
+In order to increase training throughput we leverage frozen pretrained visual and text encoder (ex: CLIP) for encoding goals. As the goal encoders are not being finetuned during training we cache the embeddings for all object categories, language instructions and image goals on disk. You can download these embeddings from the following [huggingface repo 🤗](https://huggingface.co/datasets/axel81/goat-bench) using following command:
 
 ```bash
 git clone https://huggingface.co/datasets/axel81/goat-bench data/goat-assets/
