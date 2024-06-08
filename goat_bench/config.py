@@ -171,6 +171,7 @@ class SubtaskStopActionConfig(ActionConfig):
     In Goat task only, the subtask stop action is a discrete action.
     When called, the agent will request to stop the subtask.
     """
+
     type: str = "SubtaskStopAction"
 
 
@@ -186,8 +187,8 @@ class PolicyFinetuneConfig:
 
 @dataclass
 class GOATPolicyConfig(PolicyConfig):
-    name: str = "GAOTPolicy"
-    backbone: str = "resnet50"
+    name: str = "GOATPolicy"
+    backbone: str = "resnet50_clip_avgpool"
     use_augmentations: bool = True
     augmentations_name: str = "jitter+shift"
     use_augmentations_test_time: bool = True

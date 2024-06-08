@@ -13,21 +13,27 @@ from habitat_baselines.common.baseline_registry import baseline_registry
 from habitat_baselines.rl.ddppo.policy import PointNavResNetNet
 from habitat_baselines.rl.ddppo.policy.resnet import resnet18
 from habitat_baselines.rl.ddppo.policy.resnet_policy import ResNetEncoder
-from habitat_baselines.rl.models.rnn_state_encoder import \
-    build_rnn_state_encoder
+from habitat_baselines.rl.models.rnn_state_encoder import (
+    build_rnn_state_encoder,
+)
 from habitat_baselines.rl.ppo import Net, NetPolicy
 from habitat_baselines.utils.common import get_num_actions
 from torch import nn as nn
 from torchvision import transforms as T
 
-from goat_bench.task.sensors import (CacheImageGoalSensor, ClipGoalSelectorSensor,
-                               ClipImageGoalSensor, ClipObjectGoalSensor,
-                               GoatGoalSensor, GoatMultiGoalSensor,
-                               LanguageGoalSensor)
+from goat_bench.task.sensors import (
+    CacheImageGoalSensor,
+    ClipGoalSelectorSensor,
+    ClipImageGoalSensor,
+    ClipObjectGoalSensor,
+    GoatGoalSensor,
+    GoatMultiGoalSensor,
+    LanguageGoalSensor,
+)
 
 
-@baseline_registry.register_policy(name="PointNavResnetCLIPPolicy")
-class PointNavResNetCLIPPolicy(NetPolicy):
+@baseline_registry.register_policy(name="GOATPolicy")
+class GOATPolicy(NetPolicy):
     def __init__(
         self,
         observation_space: spaces.Dict,

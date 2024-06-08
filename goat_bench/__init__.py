@@ -7,6 +7,7 @@ from goat_bench.models import (
     objaverse_clip_policy,
     ovrl_policy,
 )
+from goat_bench.obs_transformer import resize
 from goat_bench.task import (
     actions,
     environments,

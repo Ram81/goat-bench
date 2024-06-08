@@ -59,11 +59,8 @@ class GoatPPOTrainer(PPOTrainer):
                 checkpoint_path, map_location="cpu"
             )
             step_id = ckpt_dict["extra_state"]["step"]
-            print(step_id)
         else:
             ckpt_dict = {"config": None}
-
-        print("GOAT ckpt_dict", ckpt_dict)
 
         config = self._get_resume_state_config_or_new_config(
             ckpt_dict["config"]

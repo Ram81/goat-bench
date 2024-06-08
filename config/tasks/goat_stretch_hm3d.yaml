@@ -2,8 +2,26 @@
 
 defaults:
   - /habitat: habitat_config_base
-  - /habitat/task: objectnav
   - /habitat/simulator/agents@habitat.simulator.agents.main_agent: rgb_agent
+  - /habitat/task: task_config_base
+  - /habitat/task/actions:
+    - stop
+    - move_forward
+    - turn_left
+    - turn_right
+    - look_up
+    - look_down
+    - subtask_stop
+  - /habitat/task/measurements:
+    - distance_to_goal
+    - success
+    - spl
+    - soft_spl
+    - goat_distance_to_goal_reward
+  - /habitat/task/lab_sensors:
+    - goat_goal_sensor
+    - compass_sensor
+    - gps_sensor
   - _self_
 
 habitat:
@@ -13,13 +31,34 @@ habitat:
 
   task:
     type: Goat-v1
-    actions:
-      subtask_stop:
-        type: SubtaskStopAction
     success_measure: success
     reward_measure: goat_distance_to_goal_reward
 
+    actions:
+      subtask_stop:
+        type: SubtaskStopAction
+    
+    lab_sensors:
+      goat_goal_sensor:
+        object_cache: data/clip_embeddings/ovon_stretch_final_cache.pkl
+        image_cache: data/datasets/iin/hm3d/v2/train_goal_embeddings/
+        image_cache_encoder: CLIP_goat
+        language_cache: data/datasets/languagenav/hm3d/v5_final/train_embeddings/clip_train_embeddings.pkl
+
+    measurements:
+      distance_to_goal:
+        type: GoatDistanceToGoal
+        distance_to: "VIEW_POINTS"
+      spl:
+        type: GoatSPL
+      soft_spl:
+        type: GoatSoftSPL
+      success:
+        type: GoatSuccess
+        success_distance: 0.25 
+
   simulator:
+    type: GOATSim-v0
     turn_angle: 30
     tilt_angle: 30
     action_space_config: "v2-goat"
@@ -40,4 +79,4 @@ habitat:
   dataset:
     type: Goat-v1
     split: train
-    data_path: data/datasets/goat/v0.1.3/{split}/{split}.json.gz
+    data_path: data/datasets/goat_bench/v1/{split}/{split}.json.gz

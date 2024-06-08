@@ -183,12 +183,6 @@ class GoatDistanceToGoal(Measure):
                 "prev_distance_to_target": self.prev_distance_to_target,
                 "episode_ended": True,
             }
-            if subtask_switched:
-                print(
-                    subtask_switched,
-                    self._current_subtask_idx,
-                    len(episode.tasks),
-                )
             return
 
         if (
@@ -554,7 +548,6 @@ class GoatDistanceToGoalReward(Measure):
         distance_to_target = task.measurements.measures[
             GoatDistanceToGoal.cls_uuid
         ].get_metric()
-        # print(distance_to_target, self._previous_distance)
 
         subtask_success_reward = 0
         # Handle case when subtask stop is called
