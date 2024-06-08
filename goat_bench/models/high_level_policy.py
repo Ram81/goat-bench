@@ -13,21 +13,17 @@ from habitat_baselines.common.baseline_registry import baseline_registry
 from habitat_baselines.rl.ddppo.policy import PointNavResNetNet
 from habitat_baselines.rl.ddppo.policy.resnet import resnet18
 from habitat_baselines.rl.ddppo.policy.resnet_policy import ResNetEncoder
-from habitat_baselines.rl.models.rnn_state_encoder import (
-    build_rnn_state_encoder,
-)
+from habitat_baselines.rl.models.rnn_state_encoder import \
+    build_rnn_state_encoder
 from habitat_baselines.rl.ppo import Net, NetPolicy
 from habitat_baselines.utils.common import get_num_actions
 from torch import nn as nn
 from torchvision import transforms as T
 
-from goat_bench.task.sensors import (
-    CacheImageGoalSensor,
-    ClipGoalSelectorSensor,
-    ClipImageGoalSensor,
-    ClipObjectGoalSensor,
-    LanguageGoalSensor,
-)
+from goat_bench.task.sensors import (CacheImageGoalSensor,
+                                     ClipGoalSelectorSensor,
+                                     ClipImageGoalSensor, ClipObjectGoalSensor,
+                                     LanguageGoalSensor)
 
 
 @baseline_registry.register_policy
@@ -131,7 +127,7 @@ class GoatHighLevelPolicyNet(Net):
         )
         missing_keys = self.ovon_policy.load_state_dict(
             self.load_ckpt(
-                "/srv/flash1/rramrakhya3/spring_2023/ovon/data/new_checkpoints/ovon/ver/resnetclip_rgb_text/seed_1/ckpt.121.pth"
+                "data/new_checkpoints/ovon/ver/resnetclip_rgb_text/seed_1/ckpt.121.pth"
             )
         )
         print("OVON missing keys: {}\n\n".format(missing_keys))

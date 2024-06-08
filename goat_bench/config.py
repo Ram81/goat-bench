@@ -26,7 +26,9 @@ cs = ConfigStore.instance()
 class ClipObjectGoalSensorConfig(LabSensorConfig):
     type: str = "ClipObjectGoalSensor"
     prompt: str = "Find and go to {category}"
-    cache: str = "data/clip_embeddings/ovon_hm3d_cache.pkl"
+    cache: str = (
+        "data/goat-assets/goal_cache/ovon/category_name_clip_embeddings.pkl"
+    )
 
 
 @dataclass

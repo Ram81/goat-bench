@@ -22,6 +22,7 @@ defaults:
     - goat_goal_sensor
     - compass_sensor
     - gps_sensor
+    - current_subtask_sensor
   - _self_
 
 habitat:
@@ -40,10 +41,10 @@ habitat:
     
     lab_sensors:
       goat_goal_sensor:
-        object_cache: data/clip_embeddings/ovon_stretch_final_cache.pkl
-        image_cache: data/datasets/iin/hm3d/v2/train_goal_embeddings/
+        object_cache: data/goat-assets/goal_cache/ovon/category_name_clip_embeddings.pkl
+        image_cache: data/goat-assets/goal_cache/iin/train_embeddings/
         image_cache_encoder: CLIP_goat
-        language_cache: data/datasets/languagenav/hm3d/v5_final/train_embeddings/clip_train_embeddings.pkl
+        language_cache: data/goat-assets/goal_cache/language_nav/train_instruction_clip_embeddings.pkl
 
     measurements:
       distance_to_goal:
