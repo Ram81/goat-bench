@@ -45,6 +45,7 @@ srun python -um goat.run \
   ~habitat.task.lab_sensors.objectgoal_sensor \
   habitat.task.lab_sensors.language_goal_sensor.cache=data/clip_embeddings/goat/language_nav_train_bert.pkl \
   habitat.task.measurements.success.success_distance=0.25 \
-  habitat.simulator.type="GOATSim-v0" 
+  habitat.simulator.type="GOATSim-v0" \
   habitat.dataset.type="LanguageNav-v1" \
+  habitat_baselines.rl.ddppo.distrib_backend="GLOO"
 
