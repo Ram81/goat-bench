@@ -21,11 +21,11 @@ from habitat_sim.simulator import Simulator
 from torchvision.transforms import ToPILImage
 from tqdm import tqdm
 
-from goat.dataset.generate_viewpoints import config_sim
-from goat.dataset.pose_sampler import PoseSampler
-from goat.dataset.semantic_utils import (ObjectCategoryMapping,
+from goat_bench.dataset.generate_viewpoints import config_sim
+from goat_bench.dataset.pose_sampler import PoseSampler
+from goat_bench.dataset.semantic_utils import (ObjectCategoryMapping,
                                          get_hm3d_semantic_scenes)
-from goat.dataset.visualization import (get_best_viewpoint_with_posesampler,
+from goat_bench.dataset.visualization import (get_best_viewpoint_with_posesampler,
                                         get_bounding_box, get_color, get_depth,
                                         objects_in_view)
 

@@ -27,10 +27,16 @@ from goat_bench.task.sensors import (
     ClipImageGoalSensor,
     ClipObjectGoalSensor,
     GoatGoalSensor,
+    CacheCrocoGoalFeatSensor,
+    CacheCrocoGoalPosSensor,
+    ImageGoalRotationSensor,
+    GoatInstanceImageGoalSensor,
     GoatMultiGoalSensor,
     LanguageGoalSensor,
 )
 
+from habitat.tasks.nav.instance_image_nav_task import InstanceImageGoalSensor, InstanceImageGoalHFOVSensor
+from goat_bench.models.encoders.croco_binocular_encoder import CrocoBinocularEncoder
 
 @baseline_registry.register_policy(name="GOATPolicy")
 class GOATPolicy(NetPolicy):
@@ -323,6 +329,46 @@ class PointNavResNetCLIPNet(Net):
             rnn_input_size += instance_goal_size
             rnn_input_size_info["instance_goal"] = instance_goal_size
 
+        if self.use_croco and (
+            ImageGoalRotationSensor.cls_uuid in observation_space.spaces or
+            InstanceImageGoalSensor.cls_uuid in observation_space.spaces or
+            GoatInstanceImageGoalSensor.cls_uuid in observation_space.spaces or
+            (CacheCrocoGoalPosSensor.cls_uuid in observation_space.spaces 
+            and CacheCrocoGoalFeatSensor.cls_uuid in observation_space.spaces)
+        ):
+            self.croco_binocular_encoder = CrocoBinocularEncoder(
+                observation_space=observation_space,
+                checkpoint=self.croco_ckpt,
+                adapter=self.croco_adapter,
+                hidden_size=64, # NOTE: Total will be 49 * 64 per goal
+            )
+            self.croco_binocular_encoder.to(torch.device("cuda" if torch.cuda.is_available() else "cpu"))
+            embedding_dim = 3136 # NOTE: Assuming the base decoder variant for now and FC is inside binocular encoder
+            print(
+                f"Binocular encoder embedding: {embedding_dim}, "
+                f"Add Instance linear: {add_instance_linear_projection}"
+            )
+            if self.add_instance_linear_projection:
+                self.instance_embedding = nn.Linear(embedding_dim, 256)
+                instance_goal_size = 256
+            else:
+                instance_goal_size = embedding_dim
+            
+            rnn_input_size += instance_goal_size
+            rnn_input_size_info["instance_goal"] = instance_goal_size
+
+        if self.use_hfov and InstanceImageGoalHFOVSensor.cls_uuid in observation_space.spaces:
+            hfov_input_dim = int(
+                observation_space.spaces[InstanceImageGoalHFOVSensor.cls_uuid].high[0]
+            ) + 1
+            hfov_embedding_size = 32
+            self.hfov_embedding = nn.Embedding(
+                hfov_input_dim, hfov_embedding_size
+            )
+            
+            rnn_input_size += hfov_embedding_size
+            rnn_input_size_info["hfov_embedding"] = hfov_embedding_size
+        
         if EpisodicGPSSensor.cls_uuid in observation_space.spaces:
             input_gps_dim = observation_space.spaces[
                 EpisodicGPSSensor.cls_uuid
@@ -455,6 +501,20 @@ class PointNavResNetCLIPNet(Net):
                 instance_goal = self.instance_embedding(instance_goal)
             x.append(instance_goal)
 
+        if self.use_croco and (
+            ImageGoalRotationSensor.cls_uuid in observations or
+            InstanceImageGoalSensor.cls_uuid in observations or
+            GoatInstanceImageGoalSensor.cls_uuid in observations or
+            (CacheCrocoGoalPosSensor.cls_uuid in observations 
+            and CacheCrocoGoalFeatSensor.cls_uuid in observations)
+        ):
+            instance_goal = self.croco_binocular_encoder(observations)
+            if self.add_instance_linear_projection:
+                instance_goal = self.instance_embedding(instance_goal)
+            x.append(instance_goal)
+        if self.use_hfov and InstanceImageGoalHFOVSensor.cls_uuid in observations:
+            instance_goal_hfov = observations[InstanceImageGoalHFOVSensor.cls_uuid].long()
+            x.append(self.hfov_embedding(instance_goal_hfov).squeeze(dim=1))
         if (
             ClipImageGoalSensor.cls_uuid in observations
             and not self.late_fusion

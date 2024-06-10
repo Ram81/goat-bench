@@ -12,7 +12,7 @@ from habitat_baselines.config.default_structured_configs import (
 from hydra.core.config_store import ConfigStore
 from omegaconf import DictConfig
 
-from goat.task.sensors import ImageGoalRotationSensor, ClipImageGoalSensor
+from goat_bench.task.sensors import ImageGoalRotationSensor, ClipImageGoalSensor
 
 
 @baseline_registry.register_obs_transformer()

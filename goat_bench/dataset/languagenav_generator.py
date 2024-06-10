@@ -19,11 +19,11 @@ from PIL import Image
 from torchvision.transforms import ToPILImage
 from tqdm import tqdm
 
-from goat.dataset.languagenav_dataset import LanguageNavEpisode
-from goat.dataset.objectnav_generator import ObjectGoalGenerator
-from goat.dataset.pose_sampler import PoseSampler
-from goat.dataset.semantic_utils import get_hm3d_semantic_scenes
-from goat.dataset.visualization import (draw_bbox_on_img, get_bounding_box,
+from goat_bench.dataset.languagenav_dataset import LanguageNavEpisode
+from goat_bench.dataset.objectnav_generator import ObjectGoalGenerator
+from goat_bench.dataset.pose_sampler import PoseSampler
+from goat_bench.dataset.semantic_utils import get_hm3d_semantic_scenes
+from goat_bench.dataset.visualization import (draw_bbox_on_img, get_bounding_box,
                                         objects_in_view)
 from goat.utils.utils import (load_json, load_pickle, save_image, save_pickle,
                               write_json)

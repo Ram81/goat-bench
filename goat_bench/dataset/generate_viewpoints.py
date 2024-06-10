@@ -7,9 +7,9 @@ from habitat_sim._ext.habitat_sim_bindings import SemanticObject
 from habitat_sim.agent.agent import AgentConfiguration, AgentState
 from habitat_sim.simulator import Simulator
 from numpy import ndarray
-from goat.dataset.pose_sampler import PoseSampler
-from goat.dataset.semantic_utils import ObjectCategoryMapping
-from goat.dataset.visualization import save_candidate_imgs
+from goat_bench.dataset.pose_sampler import PoseSampler
+from goat_bench.dataset.semantic_utils import ObjectCategoryMapping
+from goat_bench.dataset.visualization import save_candidate_imgs
 
 
 def config_sim(

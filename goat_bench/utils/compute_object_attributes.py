@@ -7,9 +7,9 @@ import torch
 from lavis.models import load_model_and_preprocess
 from PIL import Image
 
-from goat.dataset.languagenav_generator import LanguageGoalGenerator
-from goat.dataset.pose_sampler import PoseSampler
-from goat.dataset.semantic_utils import get_hm3d_semantic_scenes
+from goat_bench.dataset.languagenav_generator import LanguageGoalGenerator
+from goat_bench.dataset.pose_sampler import PoseSampler
+from goat_bench.dataset.semantic_utils import get_hm3d_semantic_scenes
 from goat.utils.utils import save_image
 
 

@@ -23,7 +23,7 @@ from torchvision import transforms as T
 from goat_bench.task.sensors import (CacheImageGoalSensor,
                                      ClipGoalSelectorSensor,
                                      ClipImageGoalSensor, ClipObjectGoalSensor,
-                                     LanguageGoalSensor)
+                                     LanguageGoalSensor, GoatInstanceImageGoalSensor)
 
 
 @baseline_registry.register_policy
@@ -117,9 +117,11 @@ class GoatHighLevelPolicyNet(Net):
                 not in [
                     LanguageGoalSensor.cls_uuid,
                     CacheImageGoalSensor.cls_uuid,
+                    GoatInstanceImageGoalSensor.cls_uuid,
                 ]
             }
         )
+
         self.ovon_policy = ovon_policy_cls.from_config(
             config,
             ovon_obs_space,
@@ -140,6 +142,7 @@ class GoatHighLevelPolicyNet(Net):
                 not in [
                     ClipObjectGoalSensor.cls_uuid,
                     CacheImageGoalSensor.cls_uuid,
+                    GoatInstanceImageGoalSensor.cls_uuid,
                 ]
             }
         )
@@ -238,6 +241,7 @@ class GoatHighLevelPolicyNet(Net):
                     not in [
                         CacheImageGoalSensor.cls_uuid,
                         LanguageGoalSensor.cls_uuid,
+                        GoatInstanceImageGoalSensor.cls_uuid,
                     ]
                 },
                 rnn_hidden_states,
@@ -266,6 +270,7 @@ class GoatHighLevelPolicyNet(Net):
                     not in [
                         CacheImageGoalSensor.cls_uuid,
                         ClipObjectGoalSensor.cls_uuid,
+                        GoatInstanceImageGoalSensor.cls_uuid,
                     ]
                 },
                 rnn_hidden_states,

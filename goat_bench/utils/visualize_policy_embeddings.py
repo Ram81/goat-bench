@@ -4,7 +4,7 @@ import numpy as np
 import torch
 from gym import spaces
 
-from goat.models.clip_policy import PointNavResNetCLIPPolicy
+from goat_bench.models.clip_policy import PointNavResNetCLIPPolicy
 from goat.utils.plot_tsne import plot_tsne
 from goat.utils.utils import save_pickle
 

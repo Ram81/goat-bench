@@ -30,6 +30,11 @@ class ClipObjectGoalSensorConfig(LabSensorConfig):
         "data/goat-assets/goal_cache/ovon/category_name_clip_embeddings.pkl"
     )
 
+@dataclass
+class GoatInstanceImageGoalSensorConfig(LabSensorConfig):
+    type: str = "GoatInstanceImageGoalSensor"
+    add_noise: bool = False
+
 
 @dataclass
 class GoatGoalSensorConfig(LabSensorConfig):
@@ -99,6 +104,16 @@ class CacheImageGoalSensorConfig(LabSensorConfig):
     type: str = "CacheImageGoalSensor"
     cache: str = "data/"
     image_cache_encoder: str = ""
+    
+@dataclass
+class CacheCrocoGoalPosSensorConfig(LabSensorConfig):
+    type: str = "CacheCrocoGoalPosSensor"
+    cache: str = "data/"
+
+@dataclass
+class CacheCrocoGoalFeatSensorConfig(LabSensorConfig):
+    type: str = "CacheCrocoGoalFeatSensor"
+    cache: str = "data/"
 
 
 @dataclass
@@ -204,6 +219,11 @@ class GOATPolicyConfig(PolicyConfig):
 
     clip_model: str = "RN50"
     add_clip_linear_projection: bool = False
+    add_instance_linear_projection: bool = False
+    croco_adapter: bool = False
+    use_croco: bool = False
+    croco_ckpt: str = "goat/models/encoders/croco/pretrained_models/CroCo_V2_ViTBase_SmallDecoder.pth"
+    use_hfov: bool = False
     depth_ckpt: str = ""
     late_fusion: bool = False
 
@@ -258,6 +278,13 @@ cs.store(
 )
 
 cs.store(
+    package=f"habitat.task.lab_sensors.goat_instance_imagegoal_sensor",
+    group="habitat/task/lab_sensors",
+    name="goat_instance_imagegoal_sensor",
+    node=GoatInstanceImageGoalSensorConfig,
+)
+
+cs.store(
     package=f"habitat.task.lab_sensors.goat_goal_sensor",
     group="habitat/task/lab_sensors",
     name="goat_goal_sensor",
@@ -290,6 +317,20 @@ cs.store(
     group="habitat/task/lab_sensors",
     name="cache_instance_imagegoal_sensor",
     node=CacheImageGoalSensorConfig,
+)
+
+cs.store(
+    package=f"habitat.task.lab_sensors.cache_croco_goal_pos_sensor",
+    group="habitat/task/lab_sensors",
+    name="cache_croco_goal_pos_sensor",
+    node=CacheCrocoGoalPosSensorConfig,
+)
+
+cs.store(
+    package=f"habitat.task.lab_sensors.cache_croco_goal_feat_sensor",
+    group="habitat/task/lab_sensors",
+    name="cache_croco_goal_feat_sensor",
+    node=CacheCrocoGoalFeatSensorConfig,
 )
 
 cs.store(

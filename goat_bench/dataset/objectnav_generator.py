@@ -28,9 +28,9 @@ from sklearn.cluster import AgglomerativeClustering
 # from goat.dataset.visualization import save_candidate_imgs
 from tqdm import tqdm
 
-from goat.dataset.ovon_dataset import OVONEpisode
-from goat.dataset.pose_sampler import PoseSampler
-from goat.dataset.semantic_utils import (ObjectCategoryMapping, WordnetMapping,
+from goat_bench.dataset.ovon_dataset import OVONEpisode
+from goat_bench.dataset.pose_sampler import PoseSampler
+from goat_bench.dataset.semantic_utils import (ObjectCategoryMapping, WordnetMapping,
                                          get_hm3d_semantic_scenes)
 from goat.utils.utils import load_json
 

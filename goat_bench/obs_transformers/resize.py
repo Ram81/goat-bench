@@ -18,7 +18,7 @@ from hydra.core.config_store import ConfigStore
 from omegaconf import DictConfig
 from torch import Tensor
 
-from goat.task.sensors import ClipImageGoalSensor, ImageGoalRotationSensor
+from goat_bench.task.sensors import ClipImageGoalSensor, ImageGoalRotationSensor
 
 
 @baseline_registry.register_obs_transformer()

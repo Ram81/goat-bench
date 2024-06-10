@@ -10,7 +10,7 @@ import pandas as pd
 import seaborn as sns
 from tqdm import tqdm
 
-from goat.dataset.semantic_utils import WordnetMapping
+from goat_bench.dataset.semantic_utils import WordnetMapping
 from goat.utils.utils import load_dataset, load_json, write_dataset, write_json
 
 

@@ -17,7 +17,7 @@ from torchvision.ops import masks_to_boxes
 from torchvision.transforms import PILToTensor
 from torchvision.utils import draw_bounding_boxes
 
-from goat.dataset.pose_sampler import PoseSampler
+from goat_bench.dataset.pose_sampler import PoseSampler
 
 IMAGE_DIR = "data/images/ovon_dataset_gen/debug"
 MAX_DIST = [0, 0, 200]  # Blue
