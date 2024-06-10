@@ -144,6 +144,7 @@ def cache_ovon_goals(dataset_path, output_path):
     )
     cache_embeddings(goal_categories, output_path)
 
+
 def cache_language_goals(dataset_path, output_path, model):
     files = glob.glob(os.path.join(dataset_path, "*json.gz"))
     instructions = set()
