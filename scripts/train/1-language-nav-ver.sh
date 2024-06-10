@@ -2,10 +2,10 @@
 #SBATCH --job-name=goat
 #SBATCH --output=slurm_logs/goat-ver-%j.out
 #SBATCH --error=slurm_logs/goat-ver-%j.err
-#SBATCH --gpus 1
+#SBATCH --gpus 4
 #SBATCH --nodes 1
 #SBATCH --cpus-per-task 10
-#SBATCH --ntasks-per-node 1
+#SBATCH --ntasks-per-node 4
 #SBATCH --constraint=a40
 #SBATCH --exclude=megabot,gundam,kitt,cheetah
 #SBATCH --partition=short
