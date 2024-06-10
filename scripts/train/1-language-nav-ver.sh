@@ -26,13 +26,13 @@ conda activate goat
 export PYTHONPATH=/srv/flash1/rramrakhya3/fall_2023/habitat-sim/src_python/
 export HOME=/srv/flash1/rramrakhya3/summer_2023
 
-TENSORBOARD_DIR="tb/iin/ver/resnetclip_rgb_clip_image/seed_1/"
-CHECKPOINT_DIR="data/new_checkpoints/iin/ver/resnetclip_rgb_clip_image/seed_1/"
-DATA_PATH="data/datasets/iin/hm3d/v2/"
+TENSORBOARD_DIR="tb/languagenav/ver/resnetclip_rgb_text/seed_1/"
+CHECKPOINT_DIR="data/new_checkpoints/languagenav/ver/resnetclip_rgb_text/seed_1/"
+DATA_PATH="data/datasets/languagenav/hm3d/v5_final/"
 
 srun python -um goat.run \
   --run-type train \
-  --exp-config config/experiments/ver_instance_imagenav.yaml \
+  --exp-config config/experiments/ver_language_nav.yaml \
   habitat_baselines.trainer_name="ver" \
   habitat_baselines.num_environments=32 \
   habitat_baselines.rl.policy.name=PointNavResnetCLIPPolicy \
