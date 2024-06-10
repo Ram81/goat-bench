@@ -41,10 +41,9 @@ srun python -um goat.run \
   habitat_baselines.tensorboard_dir=${TENSORBOARD_DIR} \
   habitat_baselines.checkpoint_folder=${CHECKPOINT_DIR} \
   habitat.dataset.data_path=${DATA_PATH}/train/train.json.gz \
-  +habitat/task/lab_sensors@habitat.task.lab_sensors.cache_instance_imagegoal_sensor=cache_instance_imagegoal_sensor \
-  ~habitat.task.lab_sensors.instance_imagegoal_sensor \
-  habitat.task.lab_sensors.cache_instance_imagegoal_sensor.cache=data/datasets/iin/hm3d/v2/train_goal_embeddings/ \
-  habitat.task.lab_sensors.cache_instance_imagegoal_sensor.image_cache_encoder="CLIP" \
+  +habitat/task/lab_sensors@habitat.task.lab_sensors.language_goal_sensor=language_goal_sensor \
+  ~habitat.task.lab_sensors.objectgoal_sensor \
+  habitat.task.lab_sensors.language_goal_sensor.cache=data/clip_embeddings/goat/language_nav_train_bert.pkl \
   habitat.task.measurements.success.success_distance=0.25 \
-  habitat.simulator.type="GOATSim-v0" \
-  habitat_baselines.rl.ddppo.distrib_backend="GLOO"
+  habitat.dataset.type="LanguageNav-v1" \
+  habitat.simulator.type="OVONSim-v0" 
