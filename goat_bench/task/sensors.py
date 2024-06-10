@@ -15,6 +15,7 @@ from habitat.tasks.nav.nav import NavigationEpisode
 from habitat.utils.geometry_utils import quaternion_from_coeff
 from habitat_sim.agent.agent import AgentState, SixDOFPose
 from habitat_sim import bindings as hsim
+
 from goat_bench.task.goat_task import GoatEpisode
 
 cv2 = try_cv2_import()
@@ -41,6 +42,7 @@ class ClipObjectGoalSensor(Sensor):
         dataset: a Object Goal navigation dataset that contains dictionaries
         of categories id to text mapping.
     """
+
     cls_uuid: str = "clip_objectgoal"
 
     def __init__(
@@ -222,6 +224,7 @@ class ImageGoalRotationSensor(Sensor):
         sim: reference to the simulator for calculating task observations.
         config: config for the ImageGoal sensor.
     """
+
     cls_uuid: str = "image_goal_rotation"
 
     def __init__(
@@ -302,6 +305,7 @@ class CurrentEpisodeUUIDSensor(Sensor):
         sim: reference to the simulator for calculating task observations.
         config: config for the ImageGoal sensor.
     """
+
     cls_uuid: str = "current_episode_uuid"
 
     def __init__(
@@ -354,6 +358,7 @@ class LanguageGoalSensor(Sensor):
         dataset: a Object Goal navigation dataset that contains dictionaries
         of categories id to text mapping.
     """
+
     cls_uuid: str = "language_goal"
 
     def __init__(
@@ -457,6 +462,7 @@ class CacheImageGoalSensor(Sensor):
         dataset: a Object Goal navigation dataset that contains dictionaries
         of categories id to text mapping.
     """
+
     cls_uuid: str = "cache_instance_imagegoal"
 
     def __init__(
@@ -560,6 +566,7 @@ class GoatCurrentSubtaskSensor(Sensor):
         dataset: a Object Goal navigation dataset that contains dictionaries
         of categories id to text mapping.
     """
+
     cls_uuid: str = "current_subtask"
 
     def __init__(
@@ -603,6 +610,7 @@ class GoatCurrentSubtaskSensor(Sensor):
 @registry.register_sensor
 class GoatGoalSensor(Sensor):
     r"""A sensor for Goat goals"""
+
     cls_uuid: str = "goat_subtask_goal"
 
     def __init__(
@@ -831,6 +839,7 @@ class CacheCrocoGoalFeatSensor(Sensor):
         dataset: a Object Goal navigation dataset that contains dictionaries
         of categories id to text mapping.
     """
+
     cls_uuid: str = "cache_croco_goal_feat"
 
     def __init__(
@@ -891,6 +900,7 @@ class CacheCrocoGoalPosSensor(Sensor):
         dataset: a Object Goal navigation dataset that contains dictionaries
         of categories id to text mapping.
     """
+
     cls_uuid: str = "cache_croco_goal_pos"
 
     def __init__(
