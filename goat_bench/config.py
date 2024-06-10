@@ -173,7 +173,6 @@ class SubtaskStopActionConfig(ActionConfig):
     In Goat task only, the subtask stop action is a discrete action.
     When called, the agent will request to stop the subtask.
     """
-
     type: str = "SubtaskStopAction"
 
 
