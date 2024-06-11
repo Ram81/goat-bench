@@ -39,7 +39,7 @@ srun python -um goat.run \
   habitat_baselines.checkpoint_folder=${CHECKPOINT_DIR} \
   habitat.dataset.data_path=${DATA_PATH}/train/train.json.gz \
   habitat.task.measurements.success.success_distance=0.25 \
-  habitat.simulator.type="OVONSim-v0" \
+  habitat.simulator.type="GOATSim-v0" \
   habitat_baselines.rl.policy.add_instance_linear_projection=True \
   habitat_baselines.rl.policy.croco_adapter=True \
   habitat_baselines.rl.policy.use_croco=True 

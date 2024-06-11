@@ -7,9 +7,9 @@ import torch
 from gym import spaces
 from gym.spaces import Dict as SpaceDict
 from habitat.sims.habitat_simulator.actions import HabitatSimActions
+from habitat.tasks.nav.instance_image_nav_task import InstanceImageGoalSensor
 from habitat.tasks.nav.nav import EpisodicCompassSensor, EpisodicGPSSensor
 from habitat.tasks.nav.object_nav_task import ObjectGoalSensor
-from habitat.tasks.nav.instance_image_nav_task import InstanceImageGoalSensor
 from habitat_baselines.common.baseline_registry import baseline_registry
 from habitat_baselines.rl.ddppo.policy import PointNavResNetNet
 from habitat_baselines.rl.ddppo.policy.resnet import resnet18
@@ -122,8 +122,6 @@ class GoatHighLevelPolicyNet(Net):
                 ]
             }
         )
-
-
         self.ovon_policy = ovon_policy_cls.from_config(
             config,
             ovon_obs_space,
