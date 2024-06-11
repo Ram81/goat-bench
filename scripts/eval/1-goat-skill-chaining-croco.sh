@@ -38,8 +38,7 @@ srun python -um goat_bench.run \
   +habitat/task/lab_sensors@habitat.task.lab_sensors.language_goal_sensor=language_goal_sensor \
   +habitat/task/lab_sensors@habitat.task.lab_sensors.goat_instance_imagegoal_sensor=goat_instance_imagegoal_sensor \
   ~habitat.task.lab_sensors.goat_goal_sensor \
-  habitat.task.lab_sensors.clip_objectgoal_sensor.cache=data/clip_embeddings/ovon_stretch_final_cache.pkl \
-  habitat.task.lab_sensors.language_goal_sensor.cache=data/datasets/languagenav/hm3d/v5_final/embeddings/${split}_bert_embedding.pkl \
+  habitat.task.lab_sensors.language_goal_sensor.cache=data/goat-assets/goal_cache/language_nav/${split}_bert_embedding.pkl \
   habitat_baselines.load_resume_state_config=False \
   habitat_baselines.eval.use_ckpt_config=False \
   habitat_baselines.eval.split=$split \
