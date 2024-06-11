@@ -9,6 +9,7 @@ from gym.spaces import Dict as SpaceDict
 from habitat.sims.habitat_simulator.actions import HabitatSimActions
 from habitat.tasks.nav.nav import EpisodicCompassSensor, EpisodicGPSSensor
 from habitat.tasks.nav.object_nav_task import ObjectGoalSensor
+from habitat.tasks.nav.instance_image_nav_task import InstanceImageGoalSensor, InstanceImageGoalHFOVSensor
 from habitat_baselines.common.baseline_registry import baseline_registry
 from habitat_baselines.rl.ddppo.policy import PointNavResNetNet
 from habitat_baselines.rl.ddppo.policy.resnet import resnet18
@@ -23,7 +24,7 @@ from torchvision import transforms as T
 from goat_bench.task.sensors import (CacheImageGoalSensor,
                                      ClipGoalSelectorSensor,
                                      ClipImageGoalSensor, ClipObjectGoalSensor,
-                                     LanguageGoalSensor, GoatInstanceImageGoalSensor)
+                                     LanguageGoalSensor)
 
 
 @baseline_registry.register_policy
@@ -117,7 +118,7 @@ class GoatHighLevelPolicyNet(Net):
                 not in [
                     LanguageGoalSensor.cls_uuid,
                     CacheImageGoalSensor.cls_uuid,
-                    GoatInstanceImageGoalSensor.cls_uuid,
+                    InstanceImageGoalSensor.cls_uuid,
                 ]
             }
         )
@@ -142,7 +143,7 @@ class GoatHighLevelPolicyNet(Net):
                 not in [
                     ClipObjectGoalSensor.cls_uuid,
                     CacheImageGoalSensor.cls_uuid,
-                    GoatInstanceImageGoalSensor.cls_uuid,
+                    InstanceImageGoalSensor.cls_uuid,
                 ]
             }
         )
@@ -241,7 +242,7 @@ class GoatHighLevelPolicyNet(Net):
                     not in [
                         CacheImageGoalSensor.cls_uuid,
                         LanguageGoalSensor.cls_uuid,
-                        GoatInstanceImageGoalSensor.cls_uuid,
+                        InstanceImageGoalSensor.cls_uuid,
                     ]
                 },
                 rnn_hidden_states,
@@ -270,7 +271,7 @@ class GoatHighLevelPolicyNet(Net):
                     not in [
                         CacheImageGoalSensor.cls_uuid,
                         ClipObjectGoalSensor.cls_uuid,
-                        GoatInstanceImageGoalSensor.cls_uuid,
+                        InstanceImageGoalSensor.cls_uuid,
                     ]
                 },
                 rnn_hidden_states,

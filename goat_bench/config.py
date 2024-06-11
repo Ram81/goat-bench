@@ -104,16 +104,6 @@ class CacheImageGoalSensorConfig(LabSensorConfig):
     type: str = "CacheImageGoalSensor"
     cache: str = "data/"
     image_cache_encoder: str = ""
-    
-@dataclass
-class CacheCrocoGoalPosSensorConfig(LabSensorConfig):
-    type: str = "CacheCrocoGoalPosSensor"
-    cache: str = "data/"
-
-@dataclass
-class CacheCrocoGoalFeatSensorConfig(LabSensorConfig):
-    type: str = "CacheCrocoGoalFeatSensor"
-    cache: str = "data/"
 
 
 @dataclass
@@ -317,20 +307,6 @@ cs.store(
     group="habitat/task/lab_sensors",
     name="cache_instance_imagegoal_sensor",
     node=CacheImageGoalSensorConfig,
-)
-
-cs.store(
-    package=f"habitat.task.lab_sensors.cache_croco_goal_pos_sensor",
-    group="habitat/task/lab_sensors",
-    name="cache_croco_goal_pos_sensor",
-    node=CacheCrocoGoalPosSensorConfig,
-)
-
-cs.store(
-    package=f"habitat.task.lab_sensors.cache_croco_goal_feat_sensor",
-    group="habitat/task/lab_sensors",
-    name="cache_croco_goal_feat_sensor",
-    node=CacheCrocoGoalFeatSensorConfig,
 )
 
 cs.store(

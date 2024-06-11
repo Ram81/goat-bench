@@ -18,6 +18,7 @@ from habitat_baselines.rl.models.rnn_state_encoder import (
 )
 from habitat_baselines.rl.ppo import Net, NetPolicy
 from habitat_baselines.utils.common import get_num_actions
+from habitat.tasks.nav.instance_mage_nav_task import InstanceImageGoalSensor, InstanceImageGoalHFOVSensor
 from torch import nn as nn
 from torchvision import transforms as T
 
@@ -27,15 +28,9 @@ from goat_bench.task.sensors import (
     ClipImageGoalSensor,
     ClipObjectGoalSensor,
     GoatGoalSensor,
-    CacheCrocoGoalFeatSensor,
-    CacheCrocoGoalPosSensor,
-    ImageGoalRotationSensor,
-    GoatInstanceImageGoalSensor,
     GoatMultiGoalSensor,
     LanguageGoalSensor,
 )
-
-from habitat.tasks.nav.instance_image_nav_task import InstanceImageGoalSensor, InstanceImageGoalHFOVSensor
 from goat_bench.models.encoders.croco_binocular_encoder import CrocoBinocularEncoder
 
 @baseline_registry.register_policy(name="GOATPolicy")
@@ -330,11 +325,7 @@ class PointNavResNetCLIPNet(Net):
             rnn_input_size_info["instance_goal"] = instance_goal_size
 
         if self.use_croco and (
-            ImageGoalRotationSensor.cls_uuid in observation_space.spaces or
-            InstanceImageGoalSensor.cls_uuid in observation_space.spaces or
-            GoatInstanceImageGoalSensor.cls_uuid in observation_space.spaces or
-            (CacheCrocoGoalPosSensor.cls_uuid in observation_space.spaces 
-            and CacheCrocoGoalFeatSensor.cls_uuid in observation_space.spaces)
+            InstanceImageGoalSensor.cls_uuid in observation_space.spaces
         ):
             self.croco_binocular_encoder = CrocoBinocularEncoder(
                 observation_space=observation_space,
@@ -502,11 +493,7 @@ class PointNavResNetCLIPNet(Net):
             x.append(instance_goal)
 
         if self.use_croco and (
-            ImageGoalRotationSensor.cls_uuid in observations or
-            InstanceImageGoalSensor.cls_uuid in observations or
-            GoatInstanceImageGoalSensor.cls_uuid in observations or
-            (CacheCrocoGoalPosSensor.cls_uuid in observations 
-            and CacheCrocoGoalFeatSensor.cls_uuid in observations)
+            InstanceImageGoalSensor.cls_uuid in observations
         ):
             instance_goal = self.croco_binocular_encoder(observations)
             if self.add_instance_linear_projection:
