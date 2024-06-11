@@ -7,6 +7,7 @@ import torch
 from gym import spaces
 from gym.spaces import Dict as SpaceDict
 from habitat import logger
+from habitat.tasks.nav.instance_mage_nav_task import InstanceImageGoalSensor, InstanceImageGoalHFOVSensor
 from habitat.tasks.nav.nav import EpisodicCompassSensor, EpisodicGPSSensor
 from habitat.tasks.nav.object_nav_task import ObjectGoalSensor
 from habitat_baselines.common.baseline_registry import baseline_registry
@@ -18,7 +19,6 @@ from habitat_baselines.rl.models.rnn_state_encoder import (
 )
 from habitat_baselines.rl.ppo import Net, NetPolicy
 from habitat_baselines.utils.common import get_num_actions
-from habitat.tasks.nav.instance_mage_nav_task import InstanceImageGoalSensor, InstanceImageGoalHFOVSensor
 from torch import nn as nn
 from torchvision import transforms as T
 
@@ -32,6 +32,7 @@ from goat_bench.task.sensors import (
     LanguageGoalSensor,
 )
 from goat_bench.models.encoders.croco_binocular_encoder import CrocoBinocularEncoder
+
 
 @baseline_registry.register_policy(name="GOATPolicy")
 class GOATPolicy(NetPolicy):
@@ -359,7 +360,7 @@ class PointNavResNetCLIPNet(Net):
             
             rnn_input_size += hfov_embedding_size
             rnn_input_size_info["hfov_embedding"] = hfov_embedding_size
-        
+
         if EpisodicGPSSensor.cls_uuid in observation_space.spaces:
             input_gps_dim = observation_space.spaces[
                 EpisodicGPSSensor.cls_uuid
@@ -499,9 +500,11 @@ class PointNavResNetCLIPNet(Net):
             if self.add_instance_linear_projection:
                 instance_goal = self.instance_embedding(instance_goal)
             x.append(instance_goal)
+
         if self.use_hfov and InstanceImageGoalHFOVSensor.cls_uuid in observations:
             instance_goal_hfov = observations[InstanceImageGoalHFOVSensor.cls_uuid].long()
             x.append(self.hfov_embedding(instance_goal_hfov).squeeze(dim=1))
+
         if (
             ClipImageGoalSensor.cls_uuid in observations
             and not self.late_fusion

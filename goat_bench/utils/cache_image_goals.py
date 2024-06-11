@@ -12,7 +12,6 @@ from habitat_baselines.config.default import get_config
 
 from goat_bench.models.encoders.clip import CLIPEncoder
 from goat_bench.models.encoders.vc1 import VC1Encoder
-from goat.models.encoders.croco2_encoder import Croco2Encoder
 from goat_bench.utils.utils import save_image, save_pickle
 
 
@@ -41,8 +40,6 @@ class CacheGoals:
             self.encoder = VC1Encoder(device=self.device)
         elif "CLIP" in encoder:
             self.encoder = CLIPEncoder(device=self.device)
-        elif encoder == "CroCo-V2":
-            self.encoder = Croco2Encoder(device=self.device)
         else:
             raise NotImplementedError
 

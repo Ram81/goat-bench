@@ -6,8 +6,8 @@
 #SBATCH --nodes 1
 #SBATCH --cpus-per-task 6
 #SBATCH --ntasks-per-node 1
-#SBATCH --constraint="a40"
 #SBATCH --partition=short
+#SBATCH --constraint=a40
 #SBATCH --exclude=xaea-12
 #SBATCH --signal=USR1@100
 
@@ -18,23 +18,14 @@ export MAGNUM_LOG=quiet
 MAIN_ADDR=$(scontrol show hostnames "${SLURM_JOB_NODELIST}" | head -n 1)
 export MAIN_ADDR
 
-source /srv/flash1/rramrakhya3/miniconda3/etc/profile.d/conda.sh
-conda deactivate
-conda activate goat
-
-export PYTHONPATH=/srv/flash1/rramrakhya3/fall_2023/habitat-sim/src_python/
-
-DATA_PATH="data/datasets/goat/v0.1.4"
-eval_ckpt_path_dir="data/new_checkpoints/goat/ver/chain_individual_skills/seed_1_v0.1.4/"
-tensorboard_dir="tb/goat/ver/chain_individual_skills/seed_1_v0.1.4/val_seen_analysis/"
+DATA_PATH="data/datasets/goat_bench/hm3d/v1/"
+eval_ckpt_path_dir="data/new_checkpoints/goat_bench/ver/skill_chain_croco/"
+tensorboard_dir="tb/goat_bench/ver/skill_chain_croco/val_seen/"
 split="val_seen"
-
-# echo "Evaluating ckpt: ${eval_ckpt_path_dir}"
-# echo "Data path: ${DATA_PATH}/${split}/${split}.json.gz"
 
 srun python -um goat.run \
   --run-type eval \
-  --exp-config config/experiments/ver_goat.yaml \
+  --exp-config config/experiments/ver_goat_skill_chain.yaml \
   habitat_baselines.num_environments=1 \
   habitat_baselines.trainer_name="goat_ppo" \
   habitat_baselines.rl.policy.name=GoatHighLevelPolicy \
@@ -44,12 +35,11 @@ srun python -um goat.run \
   habitat.dataset.data_path="${DATA_PATH}/${split}/${split}.json.gz" \
   +habitat/task/lab_sensors@habitat.task.lab_sensors.clip_objectgoal_sensor=clip_objectgoal_sensor \
   +habitat/task/lab_sensors@habitat.task.lab_sensors.language_goal_sensor=language_goal_sensor \
-  +habitat/task/lab_sensors@habitat.task.lab_sensors.cache_instance_imagegoal_sensor=cache_instance_imagegoal_sensor \
+  +habitat/task/lab_sensors@habitat.task.lab_sensors.ginstance_imagegoal_sensor=instance_imagegoal_sensor \
   +habitat/task/lab_sensors@habitat.task.lab_sensors.current_subtask_sensor=current_subtask_sensor \
   ~habitat.task.lab_sensors.objectgoal_sensor \
   habitat.task.lab_sensors.clip_objectgoal_sensor.cache=data/clip_embeddings/ovon_stretch_final_cache.pkl \
-  habitat.task.lab_sensors.cache_instance_imagegoal_sensor.cache=data/datasets/iin/hm3d/v2/val_seen_embeddings/ \
-  habitat.task.lab_sensors.language_goal_sensor.cache=data/datasets/languagenav/hm3d/v5_final/embeddings/val_seen_bert_embedding.pkl \
+  habitat.task.lab_sensors.language_goal_sensor.cache=data/datasets/languagenav/hm3d/v5_final/embeddings/${split}_bert_embedding.pkl \
   habitat.task.measurements.success.success_distance=0.25 \
   habitat.dataset.type="Goat-v1" \
   habitat.task.measurements.distance_to_goal.type=GoatDistanceToGoal \
@@ -63,6 +53,9 @@ srun python -um goat.run \
   habitat_baselines.eval.use_ckpt_config=False \
   habitat_baselines.eval.split=$split \
   habitat_baselines.eval.should_load_ckpt=False \
-  habitat_baselines.should_load_agent_state=False
+  habitat_baselines.should_load_agent_state=False \
+  habitat_baselines.rl.policy.add_instance_linear_projection=True \
+  habitat_baselines.rl.policy.croco_adapter=True \
+  habitat_baselines.rl.policy.use_croco=True
 
 touch $checkpoint_counter

@@ -30,11 +30,6 @@ class ClipObjectGoalSensorConfig(LabSensorConfig):
         "data/goat-assets/goal_cache/ovon/category_name_clip_embeddings.pkl"
     )
 
-@dataclass
-class GoatInstanceImageGoalSensorConfig(LabSensorConfig):
-    type: str = "GoatInstanceImageGoalSensor"
-    add_noise: bool = False
-
 
 @dataclass
 class GoatGoalSensorConfig(LabSensorConfig):
@@ -265,13 +260,6 @@ cs.store(
     group="habitat/task/lab_sensors",
     name="clip_objectgoal_sensor",
     node=ClipObjectGoalSensorConfig,
-)
-
-cs.store(
-    package=f"habitat.task.lab_sensors.goat_instance_imagegoal_sensor",
-    group="habitat/task/lab_sensors",
-    name="goat_instance_imagegoal_sensor",
-    node=GoatInstanceImageGoalSensorConfig,
 )
 
 cs.store(

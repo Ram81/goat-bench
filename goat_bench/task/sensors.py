@@ -4,17 +4,12 @@ import random
 from typing import TYPE_CHECKING, Any, Optional
 
 import numpy as np
-from gym import spaces, Space
-import habitat_sim
+from gym import spaces
 from habitat.core.embodied_task import EmbodiedTask
 from habitat.core.registry import registry
-from habitat.core.simulator import RGBSensor, Sensor, SensorTypes, Simulator, VisualObservation
+from habitat.core.simulator import RGBSensor, Sensor, SensorTypes, Simulator
 from habitat.core.utils import try_cv2_import
-from habitat.tasks.nav.instance_image_nav_task import InstanceImageParameters
 from habitat.tasks.nav.nav import NavigationEpisode
-from habitat.utils.geometry_utils import quaternion_from_coeff
-from habitat_sim.agent.agent import AgentState, SixDOFPose
-from habitat_sim import bindings as hsim
 
 from goat_bench.task.goat_task import GoatEpisode
 
@@ -825,65 +820,3 @@ class GoatMultiGoalSensor(Sensor):
             else:
                 raise NotImplementedError
         return output_embedding
-
-
-@registry.register_sensor
-class CacheCrocoGoalFeatSensor(Sensor):
-    r"""A sensor for Image goal specification as observations which is used in IIN.
-    Args:
-        sim: a reference to the simulator for calculating task observations.
-        config: a config for the ObjectGoalPromptSensor sensor. Can contain field
-            GOAL_SPEC that specifies which id use for goal specification,
-            GOAL_SPEC_MAX_VAL the maximum object_id possible used for
-            observation space definition.
-        dataset: a Object Goal navigation dataset that contains dictionaries
-        of categories id to text mapping.
-    """
-
-    cls_uuid: str = "cache_croco_goal_feat"
-
-    def __init__(
-        self,
-        *args: Any,
-        config: "DictConfig",
-        **kwargs: Any,
-    ):
-        self.cache_base_dir = config.cache
-        self._current_scene_id = ""
-        self._current_episode_id = ""
-        self._current_episode_image_goal = None
-        super().__init__(config=config)
-
-    def _get_uuid(self, *args: Any, **kwargs: Any) -> str:
-        return self.cls_uuid
-
-    def _get_sensor_type(self, *args: Any, **kwargs: Any):
-        return SensorTypes.SEMANTIC
-
-    def _get_observation_space(self, *args: Any, **kwargs: Any):
-        return spaces.Box(
-            low=-np.inf, high=np.inf, shape=(196, 768), dtype=np.float32
-        )
-
-    def get_observation(
-        self,
-        observations,
-        *args: Any,
-        episode: Any,
-        **kwargs: Any,
-    ) -> Optional[int]:
-        episode_id = f"{episode.scene_id}_{episode.episode_id}"
-        if self._current_scene_id != episode.scene_id:
-            self._current_scene_id = episode.scene_id
-            scene_id = episode.scene_id.split("/")[-1].split(".")[0]
-            self.cache = load_pickle(
-                os.path.join(self.cache_base_dir, f"{scene_id}_embedding.pkl")
-            )
-
-        if self._current_episode_id != episode_id:
-            self._current_episode_id = episode_id
-            self._current_episode_image_goal = self.cache[episode.goal_key][
-                episode.goal_image_id
-            ]["embedding"][0]
-
-        return self._current_episode_image_goal

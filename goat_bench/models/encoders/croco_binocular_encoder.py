@@ -1,14 +1,9 @@
-from typing import Dict
-
-import numpy as np
 import torch
 from torch import nn as nn
-from torch.nn import functional as F
 from goat.models.encoders.croco2_vit_encoder import Croco2ViTEncoder
 from goat.models.encoders.croco2_vit_decoder import Croco2ViTDecoder
 from torchvision import transforms as T
 from gym import spaces
-import random
 
 
 class CrocoBinocularEncoder(nn.Module):
@@ -24,7 +19,6 @@ class CrocoBinocularEncoder(nn.Module):
         self.goal_imagenav = "image_goal_rotation" in observation_space.spaces
         self.goal_instance_imagenav = "goat_instance_imagegoal" or "instance_imagegoal" in observation_space.spaces
         self.goal_features = "cache_croco_goal_feat" in observation_space.spaces and "cache_croco_goal_pos" in observation_space.spaces
-        # self.add_noise = add_noise
         imagenet_mean = [0.485, 0.456, 0.406]
         imagenet_std = [0.229, 0.224, 0.225]
         self.preprocess = T.Compose([
@@ -33,7 +27,6 @@ class CrocoBinocularEncoder(nn.Module):
             T.ConvertImageDtype(torch.float),
             T.Normalize(mean=imagenet_mean, std=imagenet_std)
         ])
-        # device = "cuda" if torch.cuda.is_available() else "cpu"
         ckpt = torch.load(checkpoint)
         kwargs = ckpt.get('croco_kwargs', {})
         if 'img_size' in kwargs:
@@ -59,10 +52,6 @@ class CrocoBinocularEncoder(nn.Module):
         self.decoder.eval()
 
         dec_embed_dim = self.decoder.dec_embed_dim
-        # TODO: Check if we should add linear here
-        # OR if linear and flatten is okay at the goal_fc level
-        # Original uses a single linear and flatten before passing to policy
-        # TODO: Check if should add a ReLU here, not mentioned in the paper
         self.fc = nn.Sequential(
             nn.Linear(
                 dec_embed_dim,
@@ -73,11 +62,10 @@ class CrocoBinocularEncoder(nn.Module):
 
     def forward(self, observations) -> torch.Tensor:  # type: ignore
         rgb = observations["rgb"]
-        rgb = rgb.permute(0, 3, 1, 2) # BATCH x CHANNEL x HEIGHT X WIDTH
+        rgb = rgb.permute(0, 3, 1, 2)
         rgb = self.preprocess(rgb)
         rgb_feat, rgb_pos = self.encoder(rgb)
 
-        # NOTE: Do we need to handle the number of environments here in any way?
         if self.goal_instance_imagenav:
             instance_imagegoal = observations["instance_imagegoal"] if "instance_imagegoal" in observations else observations["goat_instance_imagegoal"]
             instance_imagegoal = instance_imagegoal.permute(0, 3, 1, 2)
