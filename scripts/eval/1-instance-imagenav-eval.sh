@@ -32,11 +32,11 @@ DATA_PATH="data/datasets/iin/hm3d/v2/"
 echo "Evaluating ckpt: ${eval_ckpt_path_dir}"
 echo "Data path: ${DATA_PATH}/${split}/${split}.json.gz"
 
-srun python -um goat.run \
+srun python -um goat_bench.run \
   --run-type eval \
   --exp-config config/experiments/ver_instance_imagenav.yaml \
   habitat_baselines.num_environments=2 \
-  habitat_baselines.rl.policy.name=PointNavResnetCLIPPolicy \
+  habitat_baselines.rl.policy.name=GOATPolicy \
   habitat_baselines.tensorboard_dir=$tensorboard_dir \
   habitat_baselines.eval_ckpt_path_dir=$eval_ckpt_path_dir \
   habitat_baselines.checkpoint_folder=$eval_ckpt_path_dir \

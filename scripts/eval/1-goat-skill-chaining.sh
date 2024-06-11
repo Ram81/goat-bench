@@ -23,7 +23,7 @@ eval_ckpt_path_dir="data/new_checkpoints/goat_bench/ver/skill_chain/"
 tensorboard_dir="tb/goat_bench/ver/skill_chain/val_seen/"
 split="val_seen"
 
-srun python -um goat.run \
+srun python -um goat_bench.run \
   --run-type eval \
   --exp-config config/experiments/ver_goat_skill_chain.yaml \
   habitat_baselines.num_environments=1 \

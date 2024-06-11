@@ -24,7 +24,7 @@ from torchvision import transforms as T
 from goat_bench.task.sensors import (CacheImageGoalSensor,
                                      ClipGoalSelectorSensor,
                                      ClipImageGoalSensor, ClipObjectGoalSensor,
-                                     LanguageGoalSensor)
+                                     LanguageGoalSensor, GoatInstanceImageGoalSensor)
 
 
 @baseline_registry.register_policy
@@ -105,7 +105,7 @@ class GoatHighLevelPolicyNet(Net):
         print("Start initialization of GOAT high level policy.......")
 
         ovon_policy_cls = baseline_registry.get_policy(
-            "PointNavResnetCLIPPolicy"
+            "GOATPolicy"
         )
         print(observation_space)
         print(dir(observation_space))
@@ -119,6 +119,7 @@ class GoatHighLevelPolicyNet(Net):
                     LanguageGoalSensor.cls_uuid,
                     CacheImageGoalSensor.cls_uuid,
                     InstanceImageGoalSensor.cls_uuid,
+                    GoatInstanceImageGoalSensor.cls_uuid,
                 ]
             }
         )
@@ -143,11 +144,12 @@ class GoatHighLevelPolicyNet(Net):
                     ClipObjectGoalSensor.cls_uuid,
                     CacheImageGoalSensor.cls_uuid,
                     InstanceImageGoalSensor.cls_uuid,
+                    GoatInstanceImageGoalSensor.cls_uuid,
                 ]
             }
         )
         language_policy_cls = baseline_registry.get_policy(
-            "PointNavResnetCLIPPolicy"
+            "GOATPolicy"
         )
         print("Pol ", language_policy_cls)
         self.language_policy = language_policy_cls.from_config(
@@ -174,7 +176,7 @@ class GoatHighLevelPolicyNet(Net):
             }
         )
         image_policy_cls = baseline_registry.get_policy(
-            "PointNavResnetCLIPPolicy"
+            "GOATPolicy"
         )
         self.image_policy = image_policy_cls.from_config(
             config,
@@ -242,6 +244,7 @@ class GoatHighLevelPolicyNet(Net):
                         CacheImageGoalSensor.cls_uuid,
                         LanguageGoalSensor.cls_uuid,
                         InstanceImageGoalSensor.cls_uuid,
+                        GoatInstanceImageGoalSensor.cls_uuid,
                     ]
                 },
                 rnn_hidden_states,
@@ -271,6 +274,7 @@ class GoatHighLevelPolicyNet(Net):
                         CacheImageGoalSensor.cls_uuid,
                         ClipObjectGoalSensor.cls_uuid,
                         InstanceImageGoalSensor.cls_uuid,
+                        GoatInstanceImageGoalSensor.cls_uuid,
                     ]
                 },
                 rnn_hidden_states,

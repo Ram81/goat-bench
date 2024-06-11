@@ -1,7 +1,7 @@
 import torch
 from torch import nn as nn
-from goat.models.encoders.croco2_vit_encoder import Croco2ViTEncoder
-from goat.models.encoders.croco2_vit_decoder import Croco2ViTDecoder
+from goat_bench.models.encoders.croco2_vit_encoder import Croco2ViTEncoder
+from goat_bench.models.encoders.croco2_vit_decoder import Croco2ViTDecoder
 from torchvision import transforms as T
 from gym import spaces
 
@@ -71,13 +71,6 @@ class CrocoBinocularEncoder(nn.Module):
             instance_imagegoal = instance_imagegoal.permute(0, 3, 1, 2)
             instance_imagegoal = self.preprocess(instance_imagegoal)
             goal_feat, goal_pos = self.encoder(instance_imagegoal)
-        elif self.goal_imagenav:
-            imagegoal = observations["image_goal_rotation"]
-            imagegoal = imagegoal.permute(0, 3, 1, 2)
-            imagegoal = self.preprocess(imagegoal)
-            goal_feat, goal_pos = self.encoder(imagegoal)
-        elif self.goal_features:
-            goal_feat, goal_pos = observations["cache_croco_goal_feat"], observations["cache_croco_goal_pos"].long()
 
         else:
             raise NotImplementedError("Required observations not found.")

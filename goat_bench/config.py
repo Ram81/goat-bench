@@ -32,6 +32,12 @@ class ClipObjectGoalSensorConfig(LabSensorConfig):
 
 
 @dataclass
+class GoatInstanceImageGoalSensorConfig(LabSensorConfig):
+    type: str = "GoatInstanceImageGoalSensor"
+    add_noise: bool = False
+
+
+@dataclass
 class GoatGoalSensorConfig(LabSensorConfig):
     type: str = "GoatGoalSensor"
     object_cache: str = ""
@@ -207,7 +213,7 @@ class GOATPolicyConfig(PolicyConfig):
     add_instance_linear_projection: bool = False
     croco_adapter: bool = False
     use_croco: bool = False
-    croco_ckpt: str = "goat/models/encoders/croco/pretrained_models/CroCo_V2_ViTBase_SmallDecoder.pth"
+    croco_ckpt: str = "goat_bench/models/encoders/croco/pretrained_models/CroCo_V2_ViTBase_SmallDecoder.pth"
     use_hfov: bool = False
     depth_ckpt: str = ""
     late_fusion: bool = False
@@ -260,6 +266,13 @@ cs.store(
     group="habitat/task/lab_sensors",
     name="clip_objectgoal_sensor",
     node=ClipObjectGoalSensorConfig,
+)
+
+cs.store(
+    package=f"habitat.task.lab_sensors.goat_instance_imagegoal_sensor",
+    group="habitat/task/lab_sensors",
+    name="goat_instance_imagegoal_sensor",
+    node=GoatInstanceImageGoalSensorConfig,
 )
 
 cs.store(

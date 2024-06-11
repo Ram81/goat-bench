@@ -7,7 +7,7 @@ import torch
 from gym import spaces
 from gym.spaces import Dict as SpaceDict
 from habitat import logger
-from habitat.tasks.nav.instance_mage_nav_task import InstanceImageGoalSensor, InstanceImageGoalHFOVSensor
+from habitat.tasks.nav.instance_image_nav_task import InstanceImageGoalSensor, InstanceImageGoalHFOVSensor
 from habitat.tasks.nav.nav import EpisodicCompassSensor, EpisodicGPSSensor
 from habitat.tasks.nav.object_nav_task import ObjectGoalSensor
 from habitat_baselines.common.baseline_registry import baseline_registry
@@ -28,6 +28,7 @@ from goat_bench.task.sensors import (
     ClipImageGoalSensor,
     ClipObjectGoalSensor,
     GoatGoalSensor,
+    GoatInstanceImageGoalSensor,
     GoatMultiGoalSensor,
     LanguageGoalSensor,
 )
@@ -47,6 +48,11 @@ class GOATPolicy(NetPolicy):
         policy_config: "DictConfig" = None,
         aux_loss_config: Optional["DictConfig"] = None,
         add_clip_linear_projection: bool = False,
+        add_instance_linear_projection: bool = False,
+        croco_adapter: bool = False,
+        use_croco: bool = False,
+        croco_ckpt: str = None,
+        use_hfov: bool = False,
         depth_ckpt: str = "",
         late_fusion: bool = False,
         **kwargs,
@@ -72,6 +78,11 @@ class GOATPolicy(NetPolicy):
                 backbone=backbone,
                 discrete_actions=discrete_actions,
                 add_clip_linear_projection=add_clip_linear_projection,
+                add_instance_linear_projection=add_instance_linear_projection,
+                croco_adapter=croco_adapter,
+                use_croco=use_croco,
+                croco_ckpt=croco_ckpt,
+                use_hfov=use_hfov,
                 depth_ckpt=depth_ckpt,
                 late_fusion=late_fusion,
             ),
@@ -175,6 +186,10 @@ class PointNavResNetCLIPNet(Net):
         add_clip_linear_projection: bool = False,
         add_language_linear_projection: bool = False,
         add_instance_linear_projection: bool = False,
+        croco_adapter: bool = False,
+        use_croco: bool = False,
+        croco_ckpt: str = None,
+        use_hfov: bool = False,
         late_fusion: bool = False,
     ):
         super().__init__()
@@ -183,6 +198,10 @@ class PointNavResNetCLIPNet(Net):
         self.add_clip_linear_projection = add_clip_linear_projection
         self.add_language_linear_projection = add_language_linear_projection
         self.add_instance_linear_projection = add_instance_linear_projection
+        self.croco_adapter = croco_adapter
+        self.use_croco = use_croco
+        self.croco_ckpt = croco_ckpt
+        self.use_hfov = use_hfov
         self.late_fusion = late_fusion
         self._n_prev_action = 32
         if discrete_actions:
@@ -326,7 +345,8 @@ class PointNavResNetCLIPNet(Net):
             rnn_input_size_info["instance_goal"] = instance_goal_size
 
         if self.use_croco and (
-            InstanceImageGoalSensor.cls_uuid in observation_space.spaces
+            InstanceImageGoalSensor.cls_uuid in observation_space.spaces or
+            GoatInstanceImageGoalSensor.cls_uuid in observation_space.spaces
         ):
             self.croco_binocular_encoder = CrocoBinocularEncoder(
                 observation_space=observation_space,
@@ -494,7 +514,8 @@ class PointNavResNetCLIPNet(Net):
             x.append(instance_goal)
 
         if self.use_croco and (
-            InstanceImageGoalSensor.cls_uuid in observations
+            InstanceImageGoalSensor.cls_uuid in observations or
+            GoatInstanceImageGoalSensor.cls_uuid in observations
         ):
             instance_goal = self.croco_binocular_encoder(observations)
             if self.add_instance_linear_projection:
