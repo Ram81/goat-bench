@@ -36,7 +36,7 @@ srun python -um goat.run \
   --run-type eval \
   --exp-config config/experiments/ver_language_nav.yaml \
   habitat_baselines.num_environments=20 \
-  habitat_baselines.rl.policy.name=PointNavResnetCLIPPolicy \
+  habitat_baselines.rl.policy.name=GOATPolicy \
   habitat_baselines.tensorboard_dir=$tensorboard_dir \
   habitat_baselines.eval_ckpt_path_dir=$eval_ckpt_path_dir \
   habitat_baselines.checkpoint_folder=$eval_ckpt_path_dir \

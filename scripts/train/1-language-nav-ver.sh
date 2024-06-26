@@ -35,7 +35,7 @@ srun python -um goat.run \
   --exp-config config/experiments/ver_language_nav.yaml \
   habitat_baselines.trainer_name="ver" \
   habitat_baselines.num_environments=32 \
-  habitat_baselines.rl.policy.name=PointNavResnetCLIPPolicy \
+  habitat_baselines.rl.policy.name=GOATPolicy \
   habitat_baselines.rl.ddppo.train_encoder=False \
   habitat_baselines.rl.ddppo.backbone=resnet50_clip_avgpool \
   habitat_baselines.tensorboard_dir=${TENSORBOARD_DIR} \
