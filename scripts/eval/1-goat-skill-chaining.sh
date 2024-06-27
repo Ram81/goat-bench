@@ -2,12 +2,12 @@
 #SBATCH --job-name=goat
 #SBATCH --output=slurm_logs/eval/goat-%j.out
 #SBATCH --error=slurm_logs/eval/goat-%j.err
-#SBATCH --gpus 1
+#SBATCH --gpus a40:1
 #SBATCH --nodes 1
 #SBATCH --cpus-per-task 6
 #SBATCH --ntasks-per-node 1
-#SBATCH --constraint="a40"
-#SBATCH --partition=short
+#SBATCH --partition=cvmlp-lab
+#SBATCH --qos=short
 #SBATCH --exclude=xaea-12
 #SBATCH --signal=USR1@100
 
