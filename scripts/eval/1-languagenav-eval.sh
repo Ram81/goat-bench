@@ -2,12 +2,12 @@
 #SBATCH --job-name=goat
 #SBATCH --output=slurm_logs/eval/goat-%j.out
 #SBATCH --error=slurm_logs/eval/goat-%j.err
-#SBATCH --gpus 1
+#SBATCH --gpus a40:1
 #SBATCH --nodes 1
 #SBATCH --cpus-per-task 6
 #SBATCH --ntasks-per-node 1
-#SBATCH --constraint="a40|rtx_6000|2080_ti"
-#SBATCH --partition=short
+#SBATCH --partition=cvmlp-lab
+#SBATCH --qos=short
 #SBATCH --exclude=xaea-12
 #SBATCH --signal=USR1@100
 
@@ -32,11 +32,11 @@ DATA_PATH="data/datasets/languagenav/hm3d/v5_final/"
 echo "Evaluating ckpt: ${eval_ckpt_path_dir}"
 echo "Data path: ${DATA_PATH}/${split}/${split}.json.gz"
 
-srun python -um goat.run \
+srun python -um goat_bench.run \
   --run-type eval \
   --exp-config config/experiments/ver_language_nav.yaml \
   habitat_baselines.num_environments=20 \
-  habitat_baselines.rl.policy.name=PointNavResnetCLIPPolicy \
+  habitat_baselines.rl.policy.name=GOATPolicy \
   habitat_baselines.tensorboard_dir=$tensorboard_dir \
   habitat_baselines.eval_ckpt_path_dir=$eval_ckpt_path_dir \
   habitat_baselines.checkpoint_folder=$eval_ckpt_path_dir \
