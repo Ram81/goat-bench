@@ -32,7 +32,7 @@ DATA_PATH="data/datasets/languagenav/hm3d/v5_final/"
 echo "Evaluating ckpt: ${eval_ckpt_path_dir}"
 echo "Data path: ${DATA_PATH}/${split}/${split}.json.gz"
 
-srun python -um goat.run \
+srun python -um goat_bench.run \
   --run-type eval \
   --exp-config config/experiments/ver_language_nav.yaml \
   habitat_baselines.num_environments=20 \

@@ -28,7 +28,7 @@ TENSORBOARD_DIR="tb/ovon/ver/resnetclip_rgb_text/seed_1/"
 CHECKPOINT_DIR="data/new_checkpoints/ovon/ver/resnetclip_rgb_text/seed_1/"
 DATA_PATH="data/datasets/ovon/hm3d/v5_final/"
 
-srun python -um goat.run \
+srun python -um goat_bench.run \
   --run-type train \
   --exp-config config/experiments/ver_objectnav.yaml \
   habitat_baselines.trainer_name="ver" \

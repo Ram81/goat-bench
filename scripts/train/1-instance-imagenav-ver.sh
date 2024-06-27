@@ -30,7 +30,7 @@ TENSORBOARD_DIR="tb/iin/ver/resnetclip_rgb_clip_image/seed_1/"
 CHECKPOINT_DIR="data/new_checkpoints/iin/ver/resnetclip_rgb_clip_image/seed_1/"
 DATA_PATH="data/datasets/iin/hm3d/v2/"
 
-srun python -um goat.run \
+srun python -um goat_bench.run \
   --run-type train \
   --exp-config config/experiments/ver_instance_imagenav.yaml \
   habitat_baselines.trainer_name="ver" \
