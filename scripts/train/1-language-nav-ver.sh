@@ -30,12 +30,12 @@ TENSORBOARD_DIR="tb/languagenav/ver/resnetclip_rgb_text/seed_1/"
 CHECKPOINT_DIR="data/new_checkpoints/languagenav/ver/resnetclip_rgb_text/seed_1/"
 DATA_PATH="data/datasets/languagenav/hm3d/v5_final/"
 
-srun python -um goat_bench.run \
+srun python -um goat.run \
   --run-type train \
   --exp-config config/experiments/ver_language_nav.yaml \
   habitat_baselines.trainer_name="ver" \
   habitat_baselines.num_environments=32 \
-  habitat_baselines.rl.policy.name=GOATPolicy \
+  habitat_baselines.rl.policy.name=PointNavResnetCLIPPolicy \
   habitat_baselines.rl.ddppo.train_encoder=False \
   habitat_baselines.rl.ddppo.backbone=resnet50_clip_avgpool \
   habitat_baselines.tensorboard_dir=${TENSORBOARD_DIR} \

@@ -32,11 +32,11 @@ DATA_PATH="data/datasets/languagenav/hm3d/v5_final/"
 echo "Evaluating ckpt: ${eval_ckpt_path_dir}"
 echo "Data path: ${DATA_PATH}/${split}/${split}.json.gz"
 
-srun python -um goat_bench.run \
+srun python -um goat.run \
   --run-type eval \
   --exp-config config/experiments/ver_language_nav.yaml \
   habitat_baselines.num_environments=20 \
-  habitat_baselines.rl.policy.name=GOATPolicy \
+  habitat_baselines.rl.policy.name=PointNavResnetCLIPPolicy \
   habitat_baselines.tensorboard_dir=$tensorboard_dir \
   habitat_baselines.eval_ckpt_path_dir=$eval_ckpt_path_dir \
   habitat_baselines.checkpoint_folder=$eval_ckpt_path_dir \

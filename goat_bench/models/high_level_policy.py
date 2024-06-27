@@ -105,7 +105,7 @@ class GoatHighLevelPolicyNet(Net):
         print("Start initialization of GOAT high level policy.......")
 
         ovon_policy_cls = baseline_registry.get_policy(
-            "GOATPolicy"
+            "PointNavResnetCLIPPolicy"
         )
         print(observation_space)
         print(dir(observation_space))
@@ -149,7 +149,7 @@ class GoatHighLevelPolicyNet(Net):
             }
         )
         language_policy_cls = baseline_registry.get_policy(
-            "GOATPolicy"
+            "PointNavResnetCLIPPolicy"
         )
         print("Pol ", language_policy_cls)
         self.language_policy = language_policy_cls.from_config(
@@ -176,7 +176,7 @@ class GoatHighLevelPolicyNet(Net):
             }
         )
         image_policy_cls = baseline_registry.get_policy(
-            "GOATPolicy"
+            "PointNavResnetCLIPPolicy"
         )
         self.image_policy = image_policy_cls.from_config(
             config,
