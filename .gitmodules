@@ -1,0 +1,3 @@
+[submodule "goat_bench/models/encoders/croco"]
+	path = goat_bench/models/encoders/croco
+	url = git@github.com:gchhablani/croco-with-adapter.git
