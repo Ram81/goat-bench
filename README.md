@@ -68,8 +68,10 @@ The code requires the datasets in `data` folder in the following format:
   │  ├── data
   │  │  ├── scene_datasets/
   │  │  │  ├── hm3d/
-  │  │  │  │  ├── JeFG25nYj2p.glb
-  │  │  │  │  └── JeFG25nYj2p.navmesh
+  │  │  │  │  ├── train/
+  │  │  │  │  │   ├── 00488-F8PSGjTiv61/
+  │  │  │  │  │   │   ├── 00488-F8PSGjTiv61.navmesh
+  │  │  │  │  │   │   ├── 00488-F8PSGjTiv61.glb
   │  │  ├── datasets
   │  │  │  ├── goat_bench/
   │  │  │  │  ├── hm3d/
