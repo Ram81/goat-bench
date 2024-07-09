@@ -2,13 +2,13 @@
 #SBATCH --job-name=goat
 #SBATCH --output=slurm_logs/goat-ver-%j.out
 #SBATCH --error=slurm_logs/goat-ver-%j.err
-#SBATCH --gpus 4
+#SBATCH --gpus a40:4
 #SBATCH --nodes 1
 #SBATCH --cpus-per-task 10
 #SBATCH --ntasks-per-node 4
-#SBATCH --constraint=a40
+#SBATCH --partition=cvmlp-lab
+#SBATCH --qos=short
 #SBATCH --exclude=megabot,gundam,kitt,cheetah
-#SBATCH --partition=short
 #SBATCH --signal=USR1@100
 #SBATCH --requeue
 
@@ -30,12 +30,12 @@ TENSORBOARD_DIR="tb/iin/ver/resnetclip_rgb_clip_image/seed_1/"
 CHECKPOINT_DIR="data/new_checkpoints/iin/ver/resnetclip_rgb_clip_image/seed_1/"
 DATA_PATH="data/datasets/iin/hm3d/v2/"
 
-srun python -um goat.run \
+srun python -um goat_bench.run \
   --run-type train \
   --exp-config config/experiments/ver_instance_imagenav.yaml \
   habitat_baselines.trainer_name="ver" \
   habitat_baselines.num_environments=32 \
-  habitat_baselines.rl.policy.name=PointNavResnetCLIPPolicy \
+  habitat_baselines.rl.policy.name=GOATPolicy \
   habitat_baselines.rl.ddppo.train_encoder=False \
   habitat_baselines.rl.ddppo.backbone=resnet50_clip_avgpool \
   habitat_baselines.tensorboard_dir=${TENSORBOARD_DIR} \

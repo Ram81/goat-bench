@@ -2,12 +2,12 @@
 #SBATCH --job-name=goat
 #SBATCH --output=slurm_logs/eval/goat-%j.out
 #SBATCH --error=slurm_logs/eval/goat-%j.err
-#SBATCH --gpus 1
+#SBATCH --gpus a40:1
 #SBATCH --nodes 1
 #SBATCH --cpus-per-task 6
 #SBATCH --ntasks-per-node 1
-#SBATCH --constraint="a40"
-#SBATCH --partition=short
+#SBATCH --partition=cvmlp-lab
+#SBATCH --qos=short
 #SBATCH --exclude=xaea-12
 #SBATCH --signal=USR1@100
 
@@ -23,7 +23,7 @@ eval_ckpt_path_dir="data/new_checkpoints/goat_bench/ver/skill_chain/"
 tensorboard_dir="tb/goat_bench/ver/skill_chain/val_seen/"
 split="val_seen"
 
-srun python -um goat.run \
+srun python -um goat_bench.run \
   --run-type eval \
   --exp-config config/experiments/ver_goat_skill_chain.yaml \
   habitat_baselines.num_environments=1 \
