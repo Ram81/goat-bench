@@ -21,7 +21,7 @@ export MAIN_ADDR
 
 TENSORBOARD_DIR="tb/goat/release/ver/monlithic_clip/seed_1/"
 CHECKPOINT_DIR="data/new_checkpoints/goat/release/ver/monolithic_clip/seed_1/"
-DATA_PATH="data/datasets/goat_bench/v1/"
+DATA_PATH="data/datasets/goat_bench/hm3d/v1"
 
 srun python -um goat_bench.run \
   --run-type train \
