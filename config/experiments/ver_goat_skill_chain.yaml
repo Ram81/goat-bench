@@ -69,7 +69,7 @@ habitat_baselines:
     ddppo:
       sync_frac: 0.6
       distrib_backend: NCCL
-      train_encoder: False
+      train_encoder: True
 
       # Model parameters
       backbone: resnet50_clip_avgpool
