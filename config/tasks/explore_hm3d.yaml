@@ -1,0 +1,103 @@
+# @package _global_
+#
+# Frontier-exploration coverage tours over the GOAT-Bench scenes.
+#
+# This is deliberately NOT the Goat-v1 task. Exploration has no goal, so the
+# goal sensors (which would require the CLIP/LAVIS embedding caches), the
+# goal-conditioned measurements and the subtask actions are all dropped. What is
+# kept from `goat_stretch_hm3d.yaml` is everything that defines *where and as
+# whom* the agent moves: the GOAT episode dataset (its scene list and start
+# poses), the GOATSim navmesh recomputed for the Stretch body, and the Stretch
+# sensor geometry.
+#
+# The dataset is still Goat-v1 so that "the goat-bench scenes" means exactly the
+# scenes and splits GOAT-Bench defines. To explore scenes without the GOAT
+# episode files, override the dataset on the command line, e.g.
+#   habitat.dataset.type=PointNav-v1 \
+#   habitat.dataset.data_path=data/datasets/pointnav/hm3d/v1/{split}/{split}.json.gz
+
+defaults:
+  - /habitat: habitat_config_base
+  # rgbd, not rgb: the depth sensor is what the map is built from.
+  - /habitat/simulator/agents@habitat.simulator.agents.main_agent: rgbd_agent
+  - /habitat/task: task_config_base
+  - /habitat/task/actions:
+    - stop
+    - move_forward
+    - turn_left
+    - turn_right
+  - /habitat/task/lab_sensors:
+    - compass_sensor
+    - gps_sensor
+  - _self_
+
+habitat:
+  environment:
+    # Upper bound only. The real budget is --max_steps in collect_tour.py, and
+    # an episode normally ends earlier, when the frontier is exhausted.
+    max_episode_steps: 2000
+    iterator_options:
+      # Deterministic order, and one scene loaded at a time: reloading a scene
+      # per episode is what dominates wall-clock otherwise.
+      shuffle: False
+      group_by_scene: True
+      cycle: False
+
+  task:
+    type: Nav-v0
+    # No goal, so no success/SPL/distance-to-goal to measure. Coverage is
+    # computed offline by view_tour.py from the recorded poses.
+    measurements: {}
+
+  simulator:
+    # Stock habitat simulator, not GOATSim-v0. GOATSim exists to recompute each
+    # scene's navmesh for the Stretch body, but it does so through
+    # `recompute_navmesh(..., include_static_objects=False)`, a keyword removed
+    # in habitat-sim 0.2.5, so it cannot even be constructed there.
+    # HabitatExplorationEnv performs the same recomputation instead, using the
+    # navmesh_settings below, and works on both versions.
+    type: Sim-v0
+    turn_angle: 30
+    forward_step_size: 0.25
+    # `tilt_angle` -- set by goat_stretch_hm3d.yaml -- is deliberately absent.
+    # It is a habitat-lab 0.2.3 SimulatorConfig field; 0.2.5 moved it onto the
+    # look_up/look_down action configs, and setting it here fails to compose.
+    # Exploration never tilts the camera, so there is nothing to carry over.
+    agents:
+      main_agent:
+        sim_sensors:
+          rgb_sensor:
+            width: 360
+            height: 640
+            hfov: 42
+            position: [0, 1.31, 0]
+          depth_sensor:
+            width: 360
+            height: 640
+            hfov: 42
+            position: [0, 1.31, 0]
+            min_depth: 0.0
+            max_depth: 10.0
+            # Habitat returns depth in [0, 1]; HabitatExplorationEnv rescales it
+            # and marks the clamped ends as invalid. Changing this to False
+            # requires passing normalize_depth=False to that wrapper too.
+            normalize_depth: True
+        height: 1.41
+        radius: 0.17
+    # GOAT-Bench's navmesh parameters, applied by HabitatExplorationEnv together
+    # with the agent height/radius above. These decide which doorways and level
+    # changes the agent can traverse, and so how much of a scene is reachable.
+    navmesh_settings:
+      agent_max_climb: 0.20
+      cell_height: 0.20
+    habitat_sim_v0:
+      gpu_device_id: 0
+      # Sliding along walls lets the agent make progress through a collision,
+      # which hides obstacles from the collision-based map correction.
+      allow_sliding: False
+
+  dataset:
+    type: Goat-v1
+    split: val
+    scenes_dir: data/scene_datasets
+    data_path: data/datasets/goat_bench/v1/{split}/{split}.json.gz

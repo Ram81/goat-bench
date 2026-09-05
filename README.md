@@ -19,6 +19,22 @@ Mukul Khanna*, Ram Ramrakhya*, Gunjan Chhablani, Sriram Yenamandra, Theophile Ge
 GOAT-Bench is a benchmark for the Go to Any Thing (GOAT) task where an agent is spawned randomly in an unseen indoor environment and tasked with sequentially navigating to a variable number (in 5-10) of goal objects, described via the category name of the object (e.g. `couch`), a language description (e.g. `a black leather couch next to coffee table`), or an image of the object uniquely identifying the goal instance in the environment. We refer to finding each goal in a GOAT episode as a subtask. Each GOAT episode comprises 5 to 10 subtasks. We set up the GOAT task in an open-vocabulary setting; unlike many prior works, we are not restricted to navigating to a predetermined, closed set of object categories. The agent is expected to reach the goal object $g^k$ for the $k^{th}$ subtask as efficiently as possible within an allocated time budget. Once the agent completes the $k^{th}$ subtask by reaching the goal object or exhausts the allocated time budget, the agent receives next goal $g^{k+1}$ to navigate to. We use HelloRobot's Stretch robot embodiment for the GOAt agent. The agent has a height of 1.41m and base radius of 17cm. At each timestep, the agent has access to an 360 x 640 resolution RGB image $I_t$, depth image $D_t$, relative pose sensor with GPS+Compass information $P_t = (\delta x, \delta y, \delta z)$ from onboard sensors, as well as the current subtask goal $g^{k}_t$, $k$  $\forall$ $\{1, 2,...,5-10\}$. The agent's action space comprises move forward (by 0.25m), turn left and right (by 30º), look up and down (by 30º), and stop actions. A sub-task in a GOAT episode is deemed successful when the agent calls stop action within 1 meter euclidean distance from the current goal object instance – within a budget of 500 agent actions (per sub task).
 
 
+### Frontier-exploration coverage tours
+
+Separately from the GOAT task, this repo can drive an agent around the GOAT-Bench
+scenes to *cover* them — no goal, no object search — recording rgb, depth and
+poses along the way. Useful for pretraining data, mapping experiments, or
+anything that wants dense observations rather than task episodes.
+
+It has its own lighter environment and entry points; see
+[EXPLORATION.md](EXPLORATION.md).
+
+```bash
+./setup_explore_env.sh     # habitat-sim + habitat-lab, no CLIP/LAVIS needed
+./run_explore_tour.sh      # collect tours into data/tours
+python scripts/exploration/view_tour.py data/tours
+```
+
 ## :hammer: Installation
 
 Create the conda environment and install all of the dependencies. Mamba is recommended for faster installation:
