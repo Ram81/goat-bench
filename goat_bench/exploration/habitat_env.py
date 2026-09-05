@@ -66,11 +66,13 @@ class HabitatExplorationEnv:
         "the GOAT-Bench scenes" with a different navmesh would explore a
         different free space.
 
-        It is reimplemented here rather than reused because `GOATSim-v0` calls
-        `recompute_navmesh(..., include_static_objects=False)`, a keyword that
-        habitat-sim 0.2.5 removed, so that simulator cannot be constructed on
-        0.2.5 at all. The call below tries the 0.2.3 signature first and falls
-        back to the 0.2.5 one.
+        With the default config this is dead weight -- `GOATSim-v0` does the
+        work itself, and `collect_tour.py` leaves `navmesh_settings` unset so
+        it is not repeated. It exists for habitat-sim 0.2.5, where `GOATSim-v0`
+        cannot be constructed at all: it calls `recompute_navmesh(...,
+        include_static_objects=False)`, and 0.2.5 removed that keyword. The
+        call below tries the 0.2.3 signature first and falls back to the 0.2.5
+        one, so the wrapper works on either.
         """
         import habitat_sim
 

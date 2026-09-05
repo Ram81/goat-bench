@@ -206,10 +206,15 @@ def main(argv=None):
     depth_sensor = sim_config.agents.main_agent.sim_sensors.depth_sensor
 
     # Rebuild each scene's navmesh for this agent body, as GOAT-Bench does.
-    # Skipped if the config carries no navmesh_settings, in which case the
-    # scene's shipped navmesh is used as-is.
+    #
+    # GOATSim-v0 already does this itself, on construction and on every scene
+    # change, so with the default config this stays None and the simulator is
+    # left to it. The wrapper's copy is the fallback for habitat-sim 0.2.5,
+    # where GOATSim cannot be constructed at all (see the task config) and the
+    # stock Sim-v0 is used instead. Without either, the scene's shipped navmesh
+    # is used as-is -- built for whatever agent the dataset authors used.
     navmesh_settings = None
-    if "navmesh_settings" in sim_config:
+    if sim_config.type != "GOATSim-v0" and "navmesh_settings" in sim_config:
         navmesh_settings = {
             "agent_height": float(sim_config.agents.main_agent.height),
             "agent_radius": float(sim_config.agents.main_agent.radius),

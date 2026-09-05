@@ -8,8 +8,9 @@ import warnings
 # (frontier exploration for coverage tours) can run without the full GOAT
 # stack. Exploration needs the simulator and the episode datasets -- to know
 # which scenes and start poses make up a split -- but none of the
-# goal-conditioned machinery: no CLIP/LAVIS/BLIP-2 goal encoders, no RL
-# policies, and none of the habitat-lab 0.2.3-only action and gym adapters.
+# goal-conditioned machinery: no CLIP/LAVIS/BLIP-2 goal encoders and no RL
+# policies. Those are several GB of model dependencies that a coverage tour
+# never loads, so setup_explore_env.sh omits them by default.
 #
 # Both guards catch only ImportError and warn loudly rather than passing
 # silently, so a genuinely broken install stays visible. If a group fails, what
@@ -17,8 +18,9 @@ import warnings
 # Goat-v1"); these warnings are the pointer to look here first.
 
 # Group 1 -- core registration: datasets, the GOAT episode/task types and the
-# simulator. Depends only on habitat itself, and imports cleanly on both
-# habitat-lab 0.2.3 and 0.2.5.
+# simulator. This is what exploration needs: GOATSim-v0 and the Goat-v1
+# episode dataset both come from here. Needs habitat and habitat_baselines
+# (goat_bench.config imports the latter's structured configs), but no models.
 try:
     from goat_bench import config
     from goat_bench.dataset import goat_dataset, languagenav_dataset, ovon_dataset
@@ -37,10 +39,10 @@ except ImportError as e:  # pragma: no cover - depends on the installed extras
 
 # Group 2 -- the goal-conditioned stack: goal sensors, observation transforms,
 # measurements, policies and trainers, plus the action-space and gym adapters.
-# Needs the CLIP/LAVIS/VC-1 model dependencies, and `task.actions` /
-# `task.environments` additionally require habitat-lab 0.2.3 APIs
+# Needs the CLIP/LAVIS/VC-1 model dependencies (`requirements.txt` plus CLIP).
+# `task.actions` and `task.environments` also use habitat-lab 0.2.3 APIs
 # (`HabitatSimV1ActionSpaceConfiguration`, `habitat.utils.gym_adapter`) that
-# were removed in 0.2.5.
+# 0.2.5 removed, which only matters if you run exploration on 0.2.5 instead.
 try:
     from goat_bench.measurements import collision_penalty, nav, sum_reward
     from goat_bench.models import (

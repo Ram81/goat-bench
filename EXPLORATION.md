@@ -11,40 +11,71 @@ task episodes.
 
 ## Status
 
-Verified end-to-end on **MP3D** scenes (Habitat scene loading, the map update,
-frontier selection, planning, recording, and visualisation all run and produce
-sensible coverage). **Not yet run on HM3D**, because the HM3D scenes and the
-GOAT-Bench episode files are not downloadable without accepting the Matterport
-terms — see [Data](#data). Switching to HM3D is a config change, not a code
-change, but treat the first HM3D run as unverified.
+Verified end-to-end on **MP3D** scenes, in goat-bench's own environment and
+inside `GOATSim-v0`: scene loading, the per-scene navmesh rebuild, the map
+update, frontier selection, planning, recording and visualisation all run and
+produce sensible coverage, across single- and multi-scene runs.
+
+**Not yet run on HM3D**, because the HM3D scenes and the GOAT-Bench episode
+files are not downloadable without accepting the Matterport terms — see
+[Data](#data). Switching to HM3D is a config change, not a code change, but
+treat the first HM3D run as unverified.
 
 Behaviour was cross-checked against the home-robot tours this was ported from.
 Over comparable episodes the two produce near-identical statistics:
 
-| | home-robot (HSSD, 501 frames) | this port (MP3D, 401 frames) |
+| | home-robot (HSSD, 501 frames) | this port (MP3D, 4 × 401 frames) |
 | --- | --- | --- |
-| path length | 49.3 m | 45.4 m |
-| area covered | 19.6 m² | 17.8 m² |
-| forward / rotation split | 41–44% / 51–53% | 42–51% / 44–51% |
-| views per position | 5.4–6.0 | 5.4–6.0 |
+| path length | 49.3 m | 42.0 m (38.3–45.9) |
+| area covered | 19.6 m² | 17.7 m² (15.8–19.3) |
+| forward / rotation split | 41–44% / 51–53% | 40–48% / 45–54% |
+| views per position | 5.4–6.0 | 5.2–6.4 |
+
+Views-per-position is the tell-tale: the agent takes roughly six observations
+per half-metre cell it visits, in both, which is what the 360° panorama plus
+frontier re-planning produces. A tour that comes out far above that range did
+not explore — see the last of the [notes](#notes-and-gotchas).
 
 ## Setup
 
 ```bash
-./setup_explore_env.sh          # python 3.9 + habitat-sim 0.2.5 + habitat-lab
+./setup_explore_env.sh          # conda env `goat`: habitat-sim 0.2.3 + habitat-lab v0.2.3
 ```
 
-This is **not** goat-bench's `setup.sh`. Exploration does not need the
-goal-conditioned model stack (CLIP, LAVIS, VC-1), and it runs on habitat-lab
-0.2.5 rather than the 0.2.3 that GOAT training targets. Consequence: in this
-environment `goat_bench.exploration` works and GOAT training does not. The
-package guards those imports and warns at import time; see
-`goat_bench/__init__.py`. To do both, keep two environments.
+This builds **goat-bench's own environment** — the stack the main README
+describes — so exploration and GOAT training live in one place. It has to be
+that stack: exploration runs inside `GOATSim-v0`, whose navmesh recomputation
+calls `recompute_navmesh(..., include_static_objects=False)`, a keyword
+habitat-sim removed in 0.2.4.
 
-If you already have a working habitat environment, you can skip the script
-entirely — the exploration package only needs habitat, torch, scikit-fmm,
-scikit-image, scikit-learn, opencv, imageio, matplotlib, trimesh and
-numpy-quaternion.
+Two deviations from the README's recipe, both forced rather than chosen:
+
+- **python 3.8, not 3.7.** Nothing in goat-bench needs 3.7; torch needs 3.8.
+  Ada GPUs (RTX 40-series) want a CUDA 11.8 build, torch first shipped one in
+  2.0, and torch 2.x dropped python 3.7. habitat-sim 0.2.3 publishes py3.8
+  builds, so this costs nothing. On pre-Ada hardware the README's
+  `python=3.7` + `cudatoolkit=11.3` works as written.
+- **A few version pins** that the 2024-era requirements no longer resolve to on
+  their own. Without them the install succeeds and then fails at import:
+  `opencv-python==4.8.1.78` (≥4.9 changed `applyColorMap`'s output shape, which
+  breaks `import habitat` itself), `sophuspy==0.0.8` (last release exposing the
+  module as `sophus`), `lmdb==1.4.1` (newer wheels are built against a newer
+  CPython ABI), and `faster_fifo` (without it habitat-baselines takes a
+  fallback path that is itself broken). Each is commented in the script.
+
+The script leaves out the goal-conditioned model stack (CLIP, LAVIS, VC-1) —
+several GB that a coverage tour never loads. `goat_bench/__init__.py` guards
+those imports and warns at import time, so exploration runs without them. To
+train GOAT from the same environment, add them:
+
+```bash
+pip install -r requirements.txt git+https://github.com/openai/CLIP.git
+```
+
+If you already have goat-bench's environment, you do not need the script — just
+add what exploration itself uses: `scikit-fmm` (the fast-marching planner),
+`scikit-image`, `sophuspy==0.0.8`, `imageio`, `imageio-ffmpeg`, `matplotlib`
+and `trimesh`.
 
 ## Data
 
@@ -159,9 +190,26 @@ real failure mode in the home-robot original.
 - **The navmesh is recomputed per scene** for GOAT's agent body (height 1.41,
   radius 0.17, max climb 0.20). A scene's shipped navmesh is built for whatever
   agent its authors used, and traversability — which doorways count as passable —
-  depends on that. `GOATSim-v0` does this too, but through a habitat-sim 0.2.3
-  call signature, so `habitat_env.py` reimplements it version-tolerantly.
+  depends on that, so this is what makes the agent move through the same free
+  space GOAT does. `GOATSim-v0` does it, on construction and on every scene
+  change. `habitat_env.py` carries an equivalent implementation for running on
+  habitat-sim 0.2.5, where `GOATSim-v0` cannot be constructed; `collect_tour.py`
+  uses it only when the simulator is not `GOATSim-v0`, so the work is never
+  done twice.
 - **`allow_sliding` is off.** Sliding along walls lets the agent make progress
   through a collision, which hides obstacles from the map's collision correction.
 - Coverage in `view_tour.py` counts distinct 0.5 m cells *visited*, which is a
   proxy for observed area, not the mapped free space.
+- **A start the agent cannot leave burns the whole budget.** If an episode
+  begins in a closet, on a balcony, or on any patch of floor cut off from the
+  rest of the scene, frontier cells still exist beyond the walls but none are
+  reachable, so the planner keeps re-aiming at them and the agent turns on the
+  spot. Neither terminator fires: `fully_explored` needs an *empty* frontier,
+  and `stuck` counts a heading change as movement (`agent.py`,
+  `note_pose`), which rotating in place is. It shows up in `view_tour.py` as a
+  high views-per-position against very few forward steps — 18 views/position
+  and 55 forward steps out of 400, in one observed case, versus ~5.5 and ~190
+  for a healthy tour. If you generate your own episodes, sample start poses
+  from the navmesh *as rebuilt for the Stretch body*, not the one the scene
+  ships, and keep starts on a large connected island
+  (`pathfinder.island_radius`). The GOAT-Bench episodes already satisfy this.

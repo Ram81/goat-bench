@@ -27,12 +27,17 @@ EPISODES="${EPISODES:-5}"
 OUT="${OUT:-$REPO_ROOT/data/tours}"
 DEVICE="${DEVICE:-0}"
 
-# Prefer the project venv built by setup_env.sh; fall back to whatever python is
-# active, which is what you want when running inside an already-set-up conda env.
-if [ -x "$REPO_ROOT/.venv/bin/python" ]; then
-  PYTHON="$REPO_ROOT/.venv/bin/python"
+# Use the goat conda env that setup_explore_env.sh builds, unless PYTHON says
+# otherwise or that env does not exist -- in which case fall back to whatever
+# python is active, which is what you want inside an already-activated env.
+CONDA="${CONDA:-$HOME/miniforge3}"
+ENV_NAME="${ENV_NAME:-goat}"
+if [ -n "${PYTHON:-}" ]; then
+  :
+elif [ -x "$CONDA/envs/$ENV_NAME/bin/python" ]; then
+  PYTHON="$CONDA/envs/$ENV_NAME/bin/python"
 else
-  PYTHON="${PYTHON:-python}"
+  PYTHON="python"
 fi
 
 exec "$PYTHON" scripts/exploration/collect_tour.py \

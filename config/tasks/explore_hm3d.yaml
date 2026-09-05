@@ -50,19 +50,23 @@ habitat:
     measurements: {}
 
   simulator:
-    # Stock habitat simulator, not GOATSim-v0. GOATSim exists to recompute each
-    # scene's navmesh for the Stretch body, but it does so through
-    # `recompute_navmesh(..., include_static_objects=False)`, a keyword removed
-    # in habitat-sim 0.2.5, so it cannot even be constructed there.
-    # HabitatExplorationEnv performs the same recomputation instead, using the
-    # navmesh_settings below, and works on both versions.
-    type: Sim-v0
+    # GOAT-Bench's own simulator, so that exploration moves through exactly the
+    # free space GOAT does. GOATSim's job is to recompute each scene's navmesh
+    # for the Stretch body (agent height/radius below, plus navmesh_settings);
+    # that navmesh decides which doorways and level changes are traversable, and
+    # so how much of a scene is reachable at all.
+    #
+    # This needs habitat-sim 0.2.3, which is what goat-bench targets: GOATSim
+    # calls `recompute_navmesh(..., include_static_objects=False)`, a keyword
+    # removed in 0.2.5. To run on 0.2.5 instead, override `type=Sim-v0` --
+    # HabitatExplorationEnv then applies the same navmesh_settings itself.
+    type: GOATSim-v0
     turn_angle: 30
     forward_step_size: 0.25
-    # `tilt_angle` -- set by goat_stretch_hm3d.yaml -- is deliberately absent.
-    # It is a habitat-lab 0.2.3 SimulatorConfig field; 0.2.5 moved it onto the
-    # look_up/look_down action configs, and setting it here fails to compose.
-    # Exploration never tilts the camera, so there is nothing to carry over.
+    # `tilt_angle` -- set by goat_stretch_hm3d.yaml -- is omitted: it only
+    # affects look_up/look_down, which exploration never emits. Leaving it out
+    # also keeps this config loadable on habitat-lab 0.2.5, which moved the
+    # field off SimulatorConfig and onto the action configs.
     agents:
       main_agent:
         sim_sensors:

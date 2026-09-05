@@ -26,11 +26,12 @@ scenes to *cover* them — no goal, no object search — recording rgb, depth an
 poses along the way. Useful for pretraining data, mapping experiments, or
 anything that wants dense observations rather than task episodes.
 
-It has its own lighter environment and entry points; see
-[EXPLORATION.md](EXPLORATION.md).
+It runs in the same environment as the rest of this repo (habitat-sim 0.2.3 +
+habitat-lab v0.2.3, inside `GOATSim-v0`), minus the goal-conditioned model
+stack, which coverage never loads. See [EXPLORATION.md](EXPLORATION.md).
 
 ```bash
-./setup_explore_env.sh     # habitat-sim + habitat-lab, no CLIP/LAVIS needed
+./setup_explore_env.sh     # the `goat` env below, without CLIP/LAVIS
 ./run_explore_tour.sh      # collect tours into data/tours
 python scripts/exploration/view_tour.py data/tours
 ```
